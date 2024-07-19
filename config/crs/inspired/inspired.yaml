@@ -26,7 +26,7 @@ rec:
   impatience: 3
   lr_bert: !!float 1e-5
 conv:
-  epoch: 50
+  epoch: 1
   batch_size: 1
   optimizer:
     name: AdamW

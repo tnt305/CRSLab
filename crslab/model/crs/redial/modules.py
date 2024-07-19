@@ -66,11 +66,13 @@ class HRNN(nn.Module):
         num_positive_lengths = torch.sum(utterance_lengths > 0)
         sorted_utterances = sorted_utterances[:num_positive_lengths]
         sorted_lengths = sorted_lengths[:num_positive_lengths]
+        
 
         embedded = self.embedding(sorted_utterances)
         if self.use_dropout:
             embedded = self.dropout(embedded)
 
+        sorted_lengths = sorted_lengths.cpu() # pack_padded_sequence requires a 1D tensor of type int64 on CPU.
         packed_utterances = pack_padded_sequence(embedded, sorted_lengths, batch_first=True)
         _, utterance_encoding = self.utterance_encoder(packed_utterances)
 
@@ -104,6 +106,8 @@ class HRNN(nn.Module):
 
         # reorder in decreasing sequence length
         sorted_representations = utterance_encoding.index_select(0, sorted_idx)
+
+        sorted_lengths = sorted_lengths.cpu() # pack_padded_sequence requires a 1D tensor of type int64 on CPU.
         packed_sequences = pack_padded_sequence(sorted_representations, sorted_lengths, batch_first=True)
 
         _, context_state = self.dialog_encoder(packed_sequences)
@@ -144,6 +148,8 @@ class SwitchingDecoder(nn.Module):
         sorted_lengths, sorted_idx, rev_idx = sort_for_packed_sequence(request_lengths)
         sorted_request = request.index_select(0, sorted_idx)
         embedded_request = self.embedding(sorted_request)  # (batch_size, max_utterance_length, embed_dim)
+
+        sorted_lengths = sorted_lengths.cpu() # pack_padded_sequence requires a 1D tensor of type int64 on CPU.
         packed_request = pack_padded_sequence(embedded_request, sorted_lengths, batch_first=True)
 
         sorted_context_state = context_state.index_select(0, sorted_idx)
