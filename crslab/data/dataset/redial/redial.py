@@ -223,14 +223,14 @@ class ReDialDataset(BaseDataset):
         }
         return side_data
 
-    def _entity_kg_process(self, SELF_LOOP_ID=185):
+    def _entity_kg_process(self, self_loop_id=185): # change param name from SELF_LOOP_ID to self_loop_id 
         edge_list = []  # [(entity, entity, relation)]
         for entity in range(self.n_entity):
             if str(entity) not in self.entity_kg:
                 continue
-            edge_list.append((entity, entity, SELF_LOOP_ID))  # add self loop
+            edge_list.append((entity, entity, self_loop_id))  # add self loop
             for tail_and_relation in self.entity_kg[str(entity)]:
-                if entity != tail_and_relation[1] and tail_and_relation[0] != SELF_LOOP_ID:
+                if entity != tail_and_relation[1] and tail_and_relation[0] != self_loop_id:
                     edge_list.append((entity, tail_and_relation[1], tail_and_relation[0]))
                     edge_list.append((tail_and_relation[1], entity, tail_and_relation[0]))
 

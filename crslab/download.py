@@ -189,7 +189,7 @@ def move(path1, path2):
     shutil.move(path1, path2)
 
 
-def untar(path, fname, deleteTar=True):
+def untar(path, fname, delete_tar=True): #change deleteTar -> delete_tar
     """
     Unpack the given archive file to the same directory.
 
@@ -199,13 +199,13 @@ def untar(path, fname, deleteTar=True):
     :param str fname:
         The filename of the archive file.
 
-    :param bool deleteTar:
+    :param bool delete_tar:
         If true, the archive will be deleted after extraction.
     """
     logger.debug(f'unpacking {fname}')
     fullpath = os.path.join(path, fname)
     shutil.unpack_archive(fullpath, path)
-    if deleteTar:
+    if delete_tar:
         os.remove(fullpath)
 
 
