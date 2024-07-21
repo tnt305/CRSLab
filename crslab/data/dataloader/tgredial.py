@@ -321,25 +321,25 @@ class TGReDialDataLoader(BaseDataLoader):
                             pad_tail=False), batch_response)
 
 
-        def conv_interact(self, data):
-            context_tokens = [utter + [self.conv_bos_id] for utter in data['context_tokens']]
-            context_tokens[-1] = context_tokens[-1][:-1]
-            context_tokens = [truncate(merge_utt(context_tokens), max_length=self.context_truncate, truncate_tail=False)]
-            context_tokens = padded_tensor(items=context_tokens,
-                                        pad_idx=self.pad_token_idx,
-                                        max_len=self.context_truncate,
-                                        pad_tail=False)
-            context_entities = [truncate(data['context_entities'], self.entity_truncate, truncate_tail=False)]
-            context_words = [truncate(data['context_words'], self.word_truncate, truncate_tail=False)]
+    def conv_interact(self, data):
+        context_tokens = [utter + [self.conv_bos_id] for utter in data['context_tokens']]
+        context_tokens[-1] = context_tokens[-1][:-1]
+        context_tokens = [truncate(merge_utt(context_tokens), max_length=self.context_truncate, truncate_tail=False)]
+        context_tokens = padded_tensor(items=context_tokens,
+                                    pad_idx=self.pad_token_idx,
+                                    max_len=self.context_truncate,
+                                    pad_tail=False)
+        context_entities = [truncate(data['context_entities'], self.entity_truncate, truncate_tail=False)]
+        context_words = [truncate(data['context_words'], self.word_truncate, truncate_tail=False)]
 
-            return (context_tokens, context_tokens,
-                    context_tokens, context_tokens,
-                    padded_tensor(context_entities,
-                                self.pad_entity_idx,
-                                pad_tail=False),
-                    padded_tensor(context_words,
-                                self.pad_word_idx,
-                                pad_tail=False), None)
+        return (context_tokens, context_tokens,
+                context_tokens, context_tokens,
+                padded_tensor(context_entities,
+                            self.pad_entity_idx,
+                            pad_tail=False),
+                padded_tensor(context_words,
+                            self.pad_word_idx,
+                            pad_tail=False), None)
 
     def policy_process_fn(self, *args, **kwargs):
         augment_dataset = []
