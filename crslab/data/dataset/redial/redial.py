@@ -223,7 +223,7 @@ class ReDialDataset(BaseDataset):
         }
         return side_data
 
-    def _entity_kg_process(self, self_loop_id=185): # change param name from SELF_LOOP_ID to self_loop_id 
+    def _entity_kg_process(self, self_loop_id=185): # crs/ntrd/ntrd.py
         edge_list = []  # [(entity, entity, relation)]
         for entity in range(self.n_entity):
             if str(entity) not in self.entity_kg:

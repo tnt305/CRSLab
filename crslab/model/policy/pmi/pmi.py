@@ -73,12 +73,12 @@ class PMIModel(BaseModel):
 
         topic_scores = []
         for (last_topic, target_topic), num in test_last_topic_to_target_topic.items():
-            candidate_topic_to_PMI = {}
+            candidate_topic_to_pmi  = {}
             for cnad_topic in self.topic_to_num:
                 if (last_topic, cnad_topic) in p_2_gram:
-                    candidate_topic_to_PMI[cnad_topic] = p_2_gram.get((last_topic, cnad_topic), 0) / (
+                    candidate_topic_to_pmi [cnad_topic] = p_2_gram.get((last_topic, cnad_topic), 0) / (
                             p_1_gram.get(last_topic, 0) * p_1_gram.get(cnad_topic, 0))
-            top_cand = dict(sorted(candidate_topic_to_PMI.items(), key=lambda x: x[1], reverse=True))
+            top_cand = dict(sorted(candidate_topic_to_pmi .items(), key=lambda x: x[1], reverse=True))
             # top_cand = [topic for topic, num in top_cand]
             topic_scores.append([top_cand.get(topic_id, 0) for topic_id in range(self.topic_class_num)])
 

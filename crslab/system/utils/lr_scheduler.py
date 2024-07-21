@@ -195,7 +195,7 @@ class CosineAnnealingLR(LRScheduler):
     Scheduler that decays by a cosine function.
     """
 
-    def __init__(self, optimizer, T_max, eta_min=0, last_epoch=-1, warmup_steps=0):
+    def __init__(self, optimizer, t_max, eta_min=0, last_epoch=-1, warmup_steps=0):
         """
         training_steps determines the cycle length of the cosine annealing.
 
@@ -203,7 +203,7 @@ class CosineAnnealingLR(LRScheduler):
         to going from cos(0) to cos(pi)
         """
         super(CosineAnnealingLR, self).__init__(optimizer, warmup_steps)
-        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max, eta_min, last_epoch)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, t_max, eta_min, last_epoch)
 
     def train_adjust(self):
         self.scheduler.step()
@@ -213,9 +213,9 @@ class CosineAnnealingLR(LRScheduler):
 
 
 class CosineAnnealingWarmRestartsLR(LRScheduler):
-    def __init__(self, optimizer, T_0, T_mult=1, eta_min=0, last_epoch=-1, warmup_steps=0):
+    def __init__(self, optimizer, t_0, t_mult=1, eta_min=0, last_epoch=-1, warmup_steps=0):
         super(CosineAnnealingWarmRestartsLR, self).__init__(optimizer, warmup_steps)
-        self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0, T_mult, eta_min, last_epoch)
+        self.scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, t_0, t_mult, eta_min, last_epoch)
 
     def train_adjust(self):
         self.scheduler.step()

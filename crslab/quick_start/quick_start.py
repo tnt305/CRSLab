@@ -34,13 +34,13 @@ def run_crslab(config, save_data=False, restore_data=False, save_system=False, r
     """
     # dataset & dataloader
     if isinstance(config['tokenize'], str):
-        CRS_dataset = get_dataset(config, config['tokenize'], restore_data, save_data)
-        side_data = CRS_dataset.side_data
-        vocab = CRS_dataset.vocab
+        crs_dataset = get_dataset(config, config['tokenize'], restore_data, save_data)
+        side_data = crs_dataset.side_data
+        vocab = crs_dataset.vocab
 
-        train_dataloader = get_dataloader(config, CRS_dataset.train_data, vocab)
-        valid_dataloader = get_dataloader(config, CRS_dataset.valid_data, vocab)
-        test_dataloader = get_dataloader(config, CRS_dataset.test_data, vocab)
+        train_dataloader = get_dataloader(config, crs_dataset.train_data, vocab)
+        valid_dataloader = get_dataloader(config, crs_dataset.valid_data, vocab)
+        test_dataloader = get_dataloader(config, crs_dataset.test_data, vocab)
     else:
         tokenized_dataset = {}
         train_dataloader = {}

@@ -341,7 +341,7 @@ class NTRDModel(BaseModel):
             matching_logits_ = self.matching_linear(matching_tensor)
             matching_logits = torch.masked_select(matching_logits_, masked_for_selection_token.unsqueeze(-1).expand_as(matching_logits_)).view(-1, matching_logits_.shape[-1])
 
-            if matching_logits.shape[0] is not 0:
+            if matching_logits.shape[0] != 0:
                     #W1: greedy
                     _, matching_pred = matching_logits.max(dim=-1) # [bsz * dynamic_movie_nums] 
             else:
