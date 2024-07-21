@@ -195,33 +195,24 @@ class TGReDialDataset(BaseDataset):
     def _convert_to_id(self, conversation):
         augmented_convs = []
         last_role = None
+
         for utt in conversation['messages']:
             assert utt['role'] != last_role
-            # change movies into slots
+
             if self.replace_token:
-                if len(utt['movie']) != 0:
-                    while  '《' in utt['text'] :
-                        begin = utt['text'].index("《")
-                        end = utt['text'].index("》")
-                        utt['text'] = utt['text'][:begin] + [self.replace_token] + utt['text'][end+1:]
+                utt['text'] = self._replace_movies_with_slots(utt['text'])
+
             text_token_ids = [self.tok2ind.get(word, self.unk_token_idx) for word in utt["text"]]
             movie_ids = [self.entity2id[movie] for movie in utt['movie'] if movie in self.entity2id]
             entity_ids = [self.entity2id[entity] for entity in utt['entity'] if entity in self.entity2id]
             word_ids = [self.word2id[word] for word in utt['word'] if word in self.word2id]
-            policy = []
-            for action, kw in zip(utt['target'][1::2], utt['target'][2::2]):
-                if kw is None or action == '推荐电影':
-                    continue
-                if isinstance(kw, str):
-                    kw = [kw]
-                kw = [self.topic2ind.get(k, self.pad_topic_idx) for k in kw]
-                policy.append([action, kw])
-            final_kws = [self.topic2ind[kw] if kw is not None else self.pad_topic_idx for kw in utt['final'][1]]
-            final = [utt['final'][0], final_kws]
+
+            policy = self._get_policy(utt['target'])
+            final = self._get_final(utt['final'])
+
             conv_utt_id = str(conversation['conv_id']) + '/' + str(utt['local_id'])
             interaction_history = self.conv2history.get(conv_utt_id, [])
-            user_profile = self.user2profile[conversation['user_id']]
-            user_profile = [[self.tok2ind.get(token, self.unk_token_idx) for token in sent] for sent in user_profile]
+            user_profile = self._get_user_profile(conversation['user_id'])
 
             augmented_convs.append({
                 "role": utt["role"],
@@ -235,8 +226,34 @@ class TGReDialDataset(BaseDataset):
                 'user_profile': user_profile
             })
             last_role = utt["role"]
-
         return augmented_convs
+
+    def _replace_movies_with_slots(self, text):
+        while '《' in text:
+            begin = text.index("《")
+            end = text.index("》")
+            text = text[:begin] + [self.replace_token] + text[end+1:]
+        return text
+
+    def _get_policy(self, target):
+        policy = []
+        for action, kw in zip(target[1::2], target[2::2]):
+            if kw is None or action == '推荐电影':
+                continue
+            if isinstance(kw, str):
+                kw = [kw]
+            kw = [self.topic2ind.get(k, self.pad_topic_idx) for k in kw]
+            policy.append([action, kw])
+        return policy
+
+    def _get_final(self, final):
+        final_kws = [self.topic2ind[kw] if kw is not None else self.pad_topic_idx for kw in final[1]]
+        return [final[0], final_kws]
+
+    def _get_user_profile(self, user_id):
+        user_profile = self.user2profile[user_id]
+        return [[self.tok2ind.get(token, self.unk_token_idx) for token in sent] for sent in user_profile]
+
 
     def _augment_and_add(self, raw_conv_dict):
         augmented_conv_dicts = []
