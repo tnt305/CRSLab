@@ -223,8 +223,13 @@ class ReDialDataset(BaseDataset):
         }
         return side_data
 
-    def _entity_kg_process(self, self_loop_id=185): # crs/ntrd/ntrd.py
-        edge_list = []  # [(entity, entity, relation)]
+    def _entity_kg_process(self, self_loop_id=185):
+        edge_list = self._generate_edge_list(self_loop_id)
+        relation_cnt = self._count_relations(edge_list)
+        return self._process_edges(edge_list, relation_cnt)
+
+    def _generate_edge_list(self, self_loop_id):
+        edge_list = []
         for entity in range(self.n_entity):
             if str(entity) not in self.entity_kg:
                 continue
@@ -233,10 +238,16 @@ class ReDialDataset(BaseDataset):
                 if entity != tail_and_relation[1] and tail_and_relation[0] != self_loop_id:
                     edge_list.append((entity, tail_and_relation[1], tail_and_relation[0]))
                     edge_list.append((tail_and_relation[1], entity, tail_and_relation[0]))
+        return edge_list
 
-        relation_cnt, relation2id, edges, entities = defaultdict(int), dict(), set(), set()
-        for h, t, r in edge_list:
+    def _count_relations(self, edge_list):
+        relation_cnt = defaultdict(int)
+        for _, _, r in edge_list:
             relation_cnt[r] += 1
+        return relation_cnt
+
+    def _process_edges(self, edge_list, relation_cnt):
+        relation2id, edges, entities = dict(), set(), set()
         for h, t, r in edge_list:
             if relation_cnt[r] > 1000:
                 if r not in relation2id:
@@ -249,6 +260,7 @@ class ReDialDataset(BaseDataset):
             'n_relation': len(relation2id),
             'entity': list(entities)
         }
+
 
     def _word_kg_process(self):
         edges = set()  # {(entity, entity)}
