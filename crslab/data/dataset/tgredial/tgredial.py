@@ -256,46 +256,54 @@ class TGReDialDataset(BaseDataset):
 
 
     def _augment_and_add(self, raw_conv_dict):
-        augmented_conv_dicts = []
-        context_tokens, context_entities, context_words, context_policy, context_items = [], [], [], [], []
-        entity_set, word_set = set(), set()
-        for i, conv in enumerate(raw_conv_dict):
-            text_tokens, entities, movies, words, policies = conv["text"], conv["entity"], conv["movie"], conv["word"], \
-                                                             conv['policy']
-            if self.replace_token is not None: 
-                if text_tokens.count(30000) != len(movies):
-                    continue # the number of slots doesn't equal to the number of movies
-                
-            if len(context_tokens) > 0:
-                conv_dict = {
-                    'role': conv['role'],
-                    'user_profile': conv['user_profile'],
-                    "context_tokens": copy(context_tokens),
-                    "response": text_tokens,
-                    "context_entities": copy(context_entities),
-                    "context_words": copy(context_words),
-                    'interaction_history': conv['interaction_history'],
-                    'context_items': copy(context_items),
-                    "items": movies,
-                    'context_policy': copy(context_policy),
-                    'target': policies,
-                    'final': conv['final'],
-                }
-                augmented_conv_dicts.append(conv_dict)
-
-            context_tokens.append(text_tokens)
-            context_policy.append(policies)
-            context_items += movies
-            for entity in entities + movies:
+        def add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv):
+            context_tokens.append(conv["text"])
+            context_policy.append(conv['policy'])
+            context_items += conv["movie"]
+            
+            for entity in conv["entity"] + conv["movie"]:
                 if entity not in entity_set:
                     entity_set.add(entity)
                     context_entities.append(entity)
-            for word in words:
+                    
+            for word in conv["word"]:
                 if word not in word_set:
                     word_set.add(word)
                     context_words.append(word)
+        
+        def create_conv_dict(conv):
+            return {
+                'role': conv['role'],
+                'user_profile': conv['user_profile'],
+                "context_tokens": copy(context_tokens),
+                "response": conv["text"],
+                "context_entities": copy(context_entities),
+                "context_words": copy(context_words),
+                'interaction_history': conv['interaction_history'],
+                'context_items': copy(context_items),
+                "items": conv["movie"],
+                'context_policy': copy(context_policy),
+                'target': conv['policy'],
+                'final': conv['final'],
+            }
+        
+        augmented_conv_dicts = []
+        context_tokens, context_entities, context_words, context_policy, context_items = [], [], [], [], []
+        entity_set, word_set = set(), set()
 
+        for i, conv in enumerate(raw_conv_dict):
+            text_tokens, entities, movies, words, policies = conv["text"], conv["entity"], conv["movie"], conv["word"], conv['policy']
+
+            if self.replace_token is not None and text_tokens.count(30000) != len(movies):
+                continue  # the number of slots doesn't equal to the number of movies
+            
+            if len(context_tokens) > 0:
+                augmented_conv_dicts.append(create_conv_dict(conv))
+            
+            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
+        
         return augmented_conv_dicts
+
 
     def _side_data_process(self):
         processed_entity_kg = self._entity_kg_process()
