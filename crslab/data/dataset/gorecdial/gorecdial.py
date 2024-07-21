@@ -178,35 +178,46 @@ class GoRecDialDataset(BaseDataset):
         augmented_conv_dicts = []
         context_tokens, context_entities, context_words, context_items = [], [], [], []
         entity_set, word_set = set(), set()
-        for i, conv in enumerate(raw_conv_dict):
-            text_tokens, entities, movies, words, policies = conv["text"], conv["entity"], conv["movie"], conv["word"], \
-                                                             conv['policy']
-            if len(context_tokens) > 0 and len(text_tokens) > 0:
-                conv_dict = {
-                    'role': conv['role'],
-                    "context_tokens": copy(context_tokens),
-                    "response": text_tokens,
-                    "context_entities": copy(context_entities),
-                    "context_words": copy(context_words),
-                    'context_items': copy(context_items),
-                    "items": movies,
-                    'policy': policies,
-                }
-                augmented_conv_dicts.append(conv_dict)
 
+        for i, conv in enumerate(raw_conv_dict):
+            text_tokens, entities, movies, words, policies = conv["text"], conv["entity"], conv["movie"], conv["word"], conv['policy']
+            
+            if self._should_add_conv_dict(context_tokens, text_tokens):
+                conv_dict = self._create_conv_dict(conv, context_tokens, context_entities, context_words, context_items, text_tokens, movies, policies)
+                augmented_conv_dicts.append(conv_dict)
+            
             if len(text_tokens) > 0:
-                context_tokens.append(text_tokens)
-                context_items += movies
-                for entity in entities + movies:
-                    if entity not in entity_set:
-                        entity_set.add(entity)
-                        context_entities.append(entity)
-                for word in words:
-                    if word not in word_set:
-                        word_set.add(word)
-                        context_words.append(word)
+                self._update_contexts(text_tokens, movies, entities, words, context_tokens, context_items, context_entities, entity_set, context_words, word_set)
 
         return augmented_conv_dicts
+
+    def _should_add_conv_dict(self, context_tokens, text_tokens):
+        return len(context_tokens) > 0 and len(text_tokens) > 0
+
+    def _create_conv_dict(self, conv, context_tokens, context_entities, context_words, context_items, text_tokens, movies, policies):
+        return {
+            'role': conv['role'],
+            "context_tokens": copy(context_tokens),
+            "response": text_tokens,
+            "context_entities": copy(context_entities),
+            "context_words": copy(context_words),
+            'context_items': copy(context_items),
+            "items": movies,
+            'policy': policies,
+        }
+
+    def _update_contexts(self, text_tokens, movies, entities, words, context_tokens, context_items, context_entities, entity_set, context_words, word_set):
+        context_tokens.append(text_tokens)
+        context_items += movies
+        
+        self._update_entities_and_words(entities + movies, entity_set, context_entities)
+        self._update_entities_and_words(words, word_set, context_words)
+
+    def _update_entities_and_words(self, items, item_set, context_list):
+        for item in items:
+            if item not in item_set:
+                item_set.add(item)
+    
 
     def _side_data_process(self):
         processed_entity_kg = self._entity_kg_process()
