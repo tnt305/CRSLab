@@ -359,61 +359,72 @@ class TGReDialDataLoader(BaseDataLoader):
         batch_target = []
 
         for conv_dict in batch:
-            final_topic = conv_dict['final']
-            final_topic = [[
-                self.tok2ind.get(token, self.unk_token_idx) for token in self.ind2topic[topic_id]
-            ] for topic_id in final_topic[1]]
-            final_topic = merge_utt(final_topic, self.word_split_idx, False, self.sep_id)
-
-            context = conv_dict['context_tokens']
-            context = merge_utt(context,
-                                self.sent_split_idx,
-                                False,
-                                self.sep_id)
-            context += final_topic
-            context = add_start_end_token_idx(
-                truncate(context, max_length=self.context_truncate - 1, truncate_tail=False),
-                start_token_idx=self.cls_id)
+            final_topic = self._get_final_topic(conv_dict['final'])
+            context = self._get_context(conv_dict['context_tokens'], final_topic)
             batch_context.append(context)
 
-            # [topic, topic, ..., topic]
-            context_policy = []
-            for policies_one_turn in conv_dict['context_policy']:
-                if len(policies_one_turn) != 0:
-                    for policy in policies_one_turn:
-                        for topic_id in policy[1]:
-                            if topic_id != self.pad_topic_idx:
-                                policy = []
-                                for token in self.ind2topic[topic_id]:
-                                    policy.append(self.tok2ind.get(token, self.unk_token_idx))
-                                context_policy.append(policy)
-            context_policy = merge_utt(context_policy, self.word_split_idx, False)
-            context_policy = add_start_end_token_idx(
-                context_policy,
-                start_token_idx=self.cls_id,
-                end_token_idx=self.sep_id)
-            context_policy += final_topic
+            context_policy = self._get_context_policy(conv_dict['context_policy'], final_topic)
             batch_context_policy.append(context_policy)
 
             batch_user_profile.extend(conv_dict['user_profile'])
-
             batch_target.append(conv_dict['target_topic'])
 
+        return self._finalize_policy_batch(batch_context, batch_context_policy, batch_user_profile, batch_target)
+
+    def _get_final_topic(self, final_topic):
+        final_topic = [[self.tok2ind.get(token, self.unk_token_idx) for token in self.ind2topic[topic_id]]
+                    for topic_id in final_topic[1]]
+        return merge_utt(final_topic, self.word_split_idx, False, self.sep_id)
+
+    def _get_context(self, context_tokens, final_topic):
+        context = merge_utt(context_tokens, self.sent_split_idx, False, self.sep_id)
+        context += final_topic
+        return add_start_end_token_idx(
+            truncate(context, max_length=self.context_truncate - 1, truncate_tail=False),
+            start_token_idx=self.cls_id)
+
+    def _get_context_policy(self, context_policies, final_topic):
+        context_policy = []
+        for policies_one_turn in context_policies:
+            if len(policies_one_turn) != 0:
+                for policy in policies_one_turn:
+                    context_policy.extend(self._get_policy_tokens(policy[1]))
+        context_policy = merge_utt(context_policy, self.word_split_idx, False)
+        context_policy = add_start_end_token_idx(
+            context_policy,
+            start_token_idx=self.cls_id,
+            end_token_idx=self.sep_id)
+        context_policy += final_topic
+        return context_policy
+
+    def _get_policy_tokens(self, topic_ids):
+        tokens = []
+        for topic_id in topic_ids:
+            if topic_id != self.pad_topic_idx:
+                policy = [self.tok2ind.get(token, self.unk_token_idx) for token in self.ind2topic[topic_id]]
+                tokens.append(policy)
+        return tokens
+
+    def _finalize_policy_batch(self, batch_context, batch_context_policy, batch_user_profile, batch_target):
         batch_context = padded_tensor(batch_context,
-                                      pad_idx=self.pad_token_idx,
-                                      pad_tail=True,
-                                      max_len=self.context_truncate)
-        batch_cotnext_mask = (batch_context != self.pad_token_idx).long()
+                                    pad_idx=self.pad_token_idx,
+                                    pad_tail=True,
+                                    max_len=self.context_truncate)
+        batch_context_mask = (batch_context != self.pad_token_idx).long()
+
         batch_context_policy = padded_tensor(batch_context_policy,
-                                             pad_idx=self.pad_token_idx,
-                                             pad_tail=True)
+                                            pad_idx=self.pad_token_idx,
+                                            pad_tail=True)
         batch_context_policy_mask = (batch_context_policy != 0).long()
+
         batch_user_profile = padded_tensor(batch_user_profile,
-                                           pad_idx=self.pad_token_idx,
-                                           pad_tail=True)
+                                        pad_idx=self.pad_token_idx,
+                                        pad_tail=True)
         batch_user_profile_mask = (batch_user_profile != 0).long()
+
         batch_target = torch.tensor(batch_target, dtype=torch.long)
 
-        return (batch_context, batch_cotnext_mask, batch_context_policy,
+        return (batch_context, batch_context_mask, batch_context_policy,
                 batch_context_policy_mask, batch_user_profile,
                 batch_user_profile_mask, batch_target)
+
