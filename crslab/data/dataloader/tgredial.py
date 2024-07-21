@@ -231,9 +231,9 @@ class TGReDialDataLoader(BaseDataLoader):
         batch_response = []
         batch_context_entities = []
         batch_context_words = []
+
         for conv_dict in batch:
-            context_tokens = [utter + [self.conv_bos_id] for utter in conv_dict['context_tokens']]
-            context_tokens[-1] = context_tokens[-1][:-1]
+            context_tokens = self._get_context_tokens(conv_dict['context_tokens'])
             batch_context_tokens.append(
                 truncate(merge_utt(context_tokens), max_length=self.context_truncate, truncate_tail=False),
             )
@@ -245,93 +245,101 @@ class TGReDialDataLoader(BaseDataLoader):
                 )
             )
             batch_context_entities.append(
-                truncate(conv_dict['context_entities'],
-                         self.entity_truncate,
-                         truncate_tail=False))
+                truncate(conv_dict['context_entities'], self.entity_truncate, truncate_tail=False))
             batch_context_words.append(
-                truncate(conv_dict['context_words'],
-                         self.word_truncate,
-                         truncate_tail=False))
+                truncate(conv_dict['context_words'], self.word_truncate, truncate_tail=False))
+            
+            enhanced_context_tokens = self._get_enhanced_context_tokens(conv_dict, batch_context_tokens[-1])
+            batch_enhanced_context_tokens.append(enhanced_context_tokens)
 
-            enhanced_topic = []
-            if 'target' in conv_dict:
-                for target_policy in conv_dict['target']:
-                    topic_variable = target_policy[1]
-                    if isinstance(topic_variable, list):
-                        for topic in topic_variable:
-                            enhanced_topic.append(topic)
-                enhanced_topic = [[
-                    self.tok2ind.get(token, self.unk_token_idx) for token in self.ind2topic[topic_id]
-                ] for topic_id in enhanced_topic]
-                enhanced_topic = merge_utt(enhanced_topic, self.word_split_idx, False, self.sent_split_idx)
+        return self._finalize_batch(batch_context_tokens, batch_response, batch_enhanced_context_tokens,
+                                    batch_context_entities, batch_context_words)
 
-            enhanced_movie = []
-            if 'items' in conv_dict:
-                for movie_id in conv_dict['items']:
-                    enhanced_movie.append(movie_id)
-                enhanced_movie = [
-                    [self.tok2ind.get(token, self.unk_token_idx) for token in self.id2entity[movie_id].split('（')[0]]
-                    for movie_id in enhanced_movie]
-                enhanced_movie = truncate(merge_utt(enhanced_movie, self.word_split_idx, self.sent_split_idx),
-                                          self.item_truncate, truncate_tail=False)
+    def _get_context_tokens(self, context_tokens):
+        tokens = [utter + [self.conv_bos_id] for utter in context_tokens]
+        tokens[-1] = tokens[-1][:-1]
+        return tokens
 
-            if len(enhanced_movie) != 0:
-                enhanced_context_tokens = enhanced_movie + truncate(batch_context_tokens[-1],
-                                                                    max_length=self.context_truncate - len(
-                                                                        enhanced_movie), truncate_tail=False)
-            elif len(enhanced_topic) != 0:
-                enhanced_context_tokens = enhanced_topic + truncate(batch_context_tokens[-1],
-                                                                    max_length=self.context_truncate - len(
-                                                                        enhanced_topic), truncate_tail=False)
-            else:
-                enhanced_context_tokens = batch_context_tokens[-1]
-            batch_enhanced_context_tokens.append(
-                enhanced_context_tokens
-            )
+    def _get_enhanced_context_tokens(self, conv_dict, last_context_token):
+        enhanced_topic = self._get_enhanced_topic(conv_dict)
+        enhanced_movie = self._get_enhanced_movie(conv_dict)
 
+        if len(enhanced_movie) != 0:
+            return enhanced_movie + truncate(last_context_token, max_length=self.context_truncate - len(enhanced_movie), truncate_tail=False)
+        elif len(enhanced_topic) != 0:
+            return enhanced_topic + truncate(last_context_token, max_length=self.context_truncate - len(enhanced_topic), truncate_tail=False)
+        else:
+            return last_context_token
+
+    def _get_enhanced_topic(self, conv_dict):
+        enhanced_topic = []
+        if 'target' in conv_dict:
+            for target_policy in conv_dict['target']:
+                topic_variable = target_policy[1]
+                if isinstance(topic_variable, list):
+                    for topic in topic_variable:
+                        enhanced_topic.append(topic)
+            enhanced_topic = [[self.tok2ind.get(token, self.unk_token_idx) for token in self.ind2topic[topic_id]]
+                            for topic_id in enhanced_topic]
+            enhanced_topic = merge_utt(enhanced_topic, self.word_split_idx, False, self.sent_split_idx)
+        return enhanced_topic
+
+    def _get_enhanced_movie(self, conv_dict):
+        enhanced_movie = []
+        if 'items' in conv_dict:
+            for movie_id in conv_dict['items']:
+                enhanced_movie.append(movie_id)
+            enhanced_movie = [[self.tok2ind.get(token, self.unk_token_idx) for token in self.id2entity[movie_id].split('（')[0]]
+                            for movie_id in enhanced_movie]
+            enhanced_movie = truncate(merge_utt(enhanced_movie, self.word_split_idx, self.sent_split_idx),
+                                    self.item_truncate, truncate_tail=False)
+        return enhanced_movie
+
+    def _finalize_batch(self, batch_context_tokens, batch_response, batch_enhanced_context_tokens,
+                        batch_context_entities, batch_context_words):
         batch_context_tokens = padded_tensor(items=batch_context_tokens,
-                                             pad_idx=self.pad_token_idx,
-                                             max_len=self.context_truncate,
-                                             pad_tail=False)
+                                            pad_idx=self.pad_token_idx,
+                                            max_len=self.context_truncate,
+                                            pad_tail=False)
         batch_response = padded_tensor(batch_response,
-                                       pad_idx=self.pad_token_idx,
-                                       max_len=self.response_truncate,
-                                       pad_tail=True)
+                                    pad_idx=self.pad_token_idx,
+                                    max_len=self.response_truncate,
+                                    pad_tail=True)
         batch_input_ids = torch.cat((batch_context_tokens, batch_response), dim=1)
         batch_enhanced_context_tokens = padded_tensor(items=batch_enhanced_context_tokens,
-                                                      pad_idx=self.pad_token_idx,
-                                                      max_len=self.context_truncate,
-                                                      pad_tail=False)
+                                                    pad_idx=self.pad_token_idx,
+                                                    max_len=self.context_truncate,
+                                                    pad_tail=False)
         batch_enhanced_input_ids = torch.cat((batch_enhanced_context_tokens, batch_response), dim=1)
-
         return (batch_enhanced_input_ids, batch_enhanced_context_tokens,
                 batch_input_ids, batch_context_tokens,
                 padded_tensor(batch_context_entities,
-                              self.pad_entity_idx,
-                              pad_tail=False),
+                            self.pad_entity_idx,
+                            pad_tail=False),
                 padded_tensor(batch_context_words,
-                              self.pad_word_idx,
-                              pad_tail=False), batch_response)
+                            self.pad_word_idx,
+                            pad_tail=False), batch_response)
 
-    def conv_interact(self, data):
-        context_tokens = [utter + [self.conv_bos_id] for utter in data['context_tokens']]
-        context_tokens[-1] = context_tokens[-1][:-1]
-        context_tokens = [truncate(merge_utt(context_tokens), max_length=self.context_truncate, truncate_tail=False)]
-        context_tokens = padded_tensor(items=context_tokens,
-                                       pad_idx=self.pad_token_idx,
-                                       max_len=self.context_truncate,
-                                       pad_tail=False)
-        context_entities = [truncate(data['context_entities'], self.entity_truncate, truncate_tail=False)]
-        context_words = [truncate(data['context_words'], self.word_truncate, truncate_tail=False)]
 
-        return (context_tokens, context_tokens,
-                context_tokens, context_tokens,
-                padded_tensor(context_entities,
-                              self.pad_entity_idx,
-                              pad_tail=False),
-                padded_tensor(context_words,
-                              self.pad_word_idx,
-                              pad_tail=False), None)
+        def conv_interact(self, data):
+            context_tokens = [utter + [self.conv_bos_id] for utter in data['context_tokens']]
+            context_tokens[-1] = context_tokens[-1][:-1]
+            context_tokens = [truncate(merge_utt(context_tokens), max_length=self.context_truncate, truncate_tail=False)]
+            context_tokens = padded_tensor(items=context_tokens,
+                                        pad_idx=self.pad_token_idx,
+                                        max_len=self.context_truncate,
+                                        pad_tail=False)
+            context_entities = [truncate(data['context_entities'], self.entity_truncate, truncate_tail=False)]
+            context_words = [truncate(data['context_words'], self.word_truncate, truncate_tail=False)]
+
+            return (context_tokens, context_tokens,
+                    context_tokens, context_tokens,
+                    padded_tensor(context_entities,
+                                self.pad_entity_idx,
+                                pad_tail=False),
+                    padded_tensor(context_words,
+                                self.pad_word_idx,
+                                pad_tail=False), None)
 
     def policy_process_fn(self, *args, **kwargs):
         augment_dataset = []
