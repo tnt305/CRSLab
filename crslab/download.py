@@ -220,15 +220,16 @@ def remove_dir(path):
     shutil.rmtree(path, ignore_errors=True)
 
 
+BUILT_FLAG = '.built'
+
 def check_build(path, version_string=None):
     """
     Check if '.built' flag has been set for that task.
-
     If a version_string is provided, this has to match, or the version is regarded as
     not built.
     """
+    fname = os.path.join(path, BUILT_FLAG)
     if version_string:
-        fname = os.path.join(path, '.built')
         if not os.path.isfile(fname):
             return False
         else:
@@ -236,27 +237,23 @@ def check_build(path, version_string=None):
                 text = read.read().split('\n')
             return len(text) > 1 and text[1] == version_string
     else:
-        return os.path.isfile(os.path.join(path, '.built'))
-
+        return os.path.isfile(fname)
 
 def mark_done(path, version_string=None):
     """
     Mark this path as prebuilt.
-
     Marks the path as done by adding a '.built' file with the current timestamp
     plus a version description string if specified.
-
     :param str path:
         The file path to mark as built.
-
     :param str version_string:
         The version of this dataset.
     """
-    with open(os.path.join(path, '.built'), 'w') as write:
+    fname = os.path.join(path, BUILT_FLAG)
+    with open(fname, 'w') as write:
         write.write(str(datetime.datetime.today()))
         if version_string:
             write.write('\n' + version_string)
-
 
 def build(dpath, dfile, version=None):
     if not check_build(dpath, version):
