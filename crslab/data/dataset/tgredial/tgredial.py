@@ -300,7 +300,7 @@ class TGReDialDataset(BaseDataset):
             if context_tokens:
                 augmented_conv_dicts.append(create_conv_dict(conv, context_tokens, context_entities, context_words, context_policy, context_items))
             
-            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set)
+            self.add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set)
         
         return augmented_conv_dicts
 
