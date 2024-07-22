@@ -110,46 +110,67 @@ class TGConvModel(BaseModel):
         return generated_response
 
     def generate_bs(self, context, beam=4):
-        context = context[..., -self.response_truncate + 1:]
+        context = self._truncate_context(context)
         context_former = context
         batch_size = context.shape[0]
-        sequences = [[[list(), 1.0]]] * batch_size
-        for i in range(self.response_truncate - 1):
-            if sequences != [[[list(), 1.0]]] * batch_size:
-                context = []
-                for i in range(batch_size):
-                    for cand in sequences[i]:
-                        text = torch.cat(
-                            (context_former[i], torch.tensor(cand[0]).to(self.device)))  # 由于取消了state，与之前的context拼接
-                        context.append(text)
-                context = torch.stack(context)
-            with torch.no_grad():
-                outputs = self.model(context)
-            last_hidden_state, state = outputs.logits, outputs.past_key_values
-            next_token_logits = last_hidden_state[:, -1, :]
-            next_token_probs = torch.nn.functional.softmax(next_token_logits)
-            topk = torch.topk(next_token_probs, beam, dim=-1)
-            probs = topk.values.reshape([batch_size, -1, beam])  # (bs, candidate, beam)
-            preds = topk.indices.reshape([batch_size, -1, beam])  # (bs, candidate, beam)
+        sequences = self._initialize_sequences(batch_size)
 
-            for j in range(batch_size):
-                all_candidates = []
-                for n in range(len(sequences[j])):
-                    for k in range(beam):
-                        seq = sequences[j][n][0]
-                        prob = sequences[j][n][1]
-                        seq_tmp = seq.copy()
-                        seq_tmp.append(preds[j][n][k])
-                        candidate = [seq_tmp, prob * probs[j][n][k]]
-                        all_candidates.append(candidate)
-                ordered = sorted(all_candidates, key=lambda tup: tup[1], reverse=True)
-                sequences[j] = ordered[:beam]
+        for _ in range(self.response_truncate - 1):
+            context = self._update_context(context, context_former, sequences, batch_size)
+            
+            next_token_probs = self._compute_next_token_probs(context)
+            probs, preds = self._get_top_k_probs_and_preds(next_token_probs, beam, batch_size)
+            
+            sequences = self._update_sequences(sequences, probs, preds, batch_size, beam)
 
-        res = []
-        for i in range(batch_size):
-            res.append(torch.stack(sequences[i][0][0]))
-        res = torch.stack(res)
-        return res
+        return self._prepare_result(sequences, batch_size)
+
+    def _truncate_context(self, context):
+        return context[..., -self.response_truncate + 1:]
+
+    def _initialize_sequences(self, batch_size):
+        return [[[list(), 1.0]]] * batch_size
+
+    def _update_context(self, context, context_former, sequences, batch_size):
+        if sequences != self._initialize_sequences(batch_size):
+            context = [
+                torch.cat((context_former[i], torch.tensor(cand[0]).to(self.device)))
+                for i in range(batch_size)
+                for cand in sequences[i]
+            ]
+            context = torch.stack(context)
+        return context
+
+    def _compute_next_token_probs(self, context):
+        with torch.no_grad():
+            outputs = self.model(context)
+        last_hidden_state = outputs.logits
+        next_token_logits = last_hidden_state[:, -1, :]
+        return torch.nn.functional.softmax(next_token_logits)
+
+    def _get_top_k_probs_and_preds(self, next_token_probs, beam, batch_size):
+        topk = torch.topk(next_token_probs, beam, dim=-1)
+        probs = topk.values.reshape([batch_size, -1, beam])
+        preds = topk.indices.reshape([batch_size, -1, beam])
+        return probs, preds
+
+    def _update_sequences(self, sequences, probs, preds, batch_size, beam):
+        new_sequences = []
+        for j in range(batch_size):
+            candidates = self._generate_candidates(sequences[j], probs[j], preds[j], beam)
+            ordered = sorted(candidates, key=lambda tup: tup[1], reverse=True)
+            new_sequences.append(ordered[:beam])
+        return new_sequences
+
+    def _generate_candidates(self, sequence, probs, preds, beam):
+        return [
+            [seq + [preds[n][k]], prob * probs[n][k]]
+            for n, (seq, prob) in enumerate(sequence)
+            for k in range(beam)
+        ]
+
+    def _prepare_result(self, sequences, batch_size):
+        return torch.stack([torch.stack(sequences[i][0][0]) for i in range(batch_size)])
 
     def calculate_loss(self, logit, labels):
         """
