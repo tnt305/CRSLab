@@ -54,49 +54,50 @@ class InspiredConvModel(BaseModel):
         """
         Args:
             batch: ::
-
                 {
                     'roles': (batch_size),
                     'input_ids': (batch_size, max_seq_length),
                     'context': (batch_size, context_truncate)
                 }
-
         """
         roles, input_ids, context, _ = batch
         input_ids_iters = input_ids.unsqueeze(1)
-
         past = None
         lm_logits_all = []
 
         if mode != 'test':
-            for turn, iter in enumerate(input_ids_iters):
-                if (roles[turn] == 0):
-                    # considering that gpt2 only supports up to 1024 tokens
-                    if past is not None and past[0].shape[3] + iter.shape[1] > 1024:
-                        past = None
-                    outputs = self.model_sk(iter, past_key_values=past)
-                    lm_logits, past = outputs.logits, outputs.past_key_values
-                    lm_logits_all.append(lm_logits)
-                else:
-                    if past is not None and past[0].shape[3] + iter.shape[1] > 1024:
-                        past = None
-                    outputs = self.model_rm(iter, past_key_values=past)
-                    lm_logits, past = outputs.logits, outputs.past_key_values
-                    lm_logits_all.append(lm_logits)
-
-            lm_logits_all = torch.cat(lm_logits_all, dim=0)  # (b_s, seq_len, vocab_size)
-
-            # index from 1 to self.reponse_truncate is valid response
-            loss = self.calculate_loss(
-                lm_logits_all[:, -self.response_truncate:-1, :],
-                input_ids[:, -self.response_truncate + 1:])
-
-            pred = torch.max(lm_logits_all, dim=2)[1]  # (b_s, seq_len)
-            pred = pred[:, -self.response_truncate:]
-
+            lm_logits_all = self._process_iterations(roles, input_ids_iters, past, lm_logits_all)
+            loss, pred = self._compute_loss_and_prediction(lm_logits_all, input_ids)
             return loss, pred
         else:
             return self.generate(roles, context)
+
+    def _process_iterations(self, roles, input_ids_iters, past, lm_logits_all):
+        for turn, iter in enumerate(input_ids_iters):
+            if roles[turn] == 0:
+                past = self._check_and_reset_past(past, iter)
+                outputs = self.model_sk(iter, past_key_values=past)
+            else:
+                past = self._check_and_reset_past(past, iter)
+                outputs = self.model_rm(iter, past_key_values=past)
+            
+            lm_logits, past = outputs.logits, outputs.past_key_values
+            lm_logits_all.append(lm_logits)
+        return lm_logits_all
+
+    def _check_and_reset_past(self, past, iter):
+        if past is not None and past[0].shape[3] + iter.shape[1] > 1024:
+            return None
+        return past
+
+    def _compute_loss_and_prediction(self, lm_logits_all, input_ids):
+        lm_logits_all = torch.cat(lm_logits_all, dim=0)  # (b_s, seq_len, vocab_size)
+        loss = self.calculate_loss(
+            lm_logits_all[:, -self.response_truncate:-1, :],
+            input_ids[:, -self.response_truncate + 1:])
+        pred = torch.max(lm_logits_all, dim=2)[1]  # (b_s, seq_len)
+        return loss, pred[:, -self.response_truncate:]
+
 
     def generate(self, roles, context):
         """
