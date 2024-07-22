@@ -259,7 +259,7 @@ class TGReDialDataset(BaseDataset):
         def add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv):
             context_tokens.append(conv["text"])
             context_policy.append(conv['policy'])
-            context_items += conv["movie"]
+            context_items.extend(conv["movie"])
             
             for entity in conv["entity"] + conv["movie"]:
                 if entity not in entity_set:
@@ -286,18 +286,18 @@ class TGReDialDataset(BaseDataset):
                 'target': conv['policy'],
                 'final': conv['final'],
             }
-        
+
         augmented_conv_dicts = []
         context_tokens, context_entities, context_words, context_policy, context_items = [], [], [], [], []
         entity_set, word_set = set(), set()
 
-        for i, conv in enumerate(raw_conv_dict):
-            text_tokens, entities, movies, words, policies = conv["text"], conv["entity"], conv["movie"], conv["word"], conv['policy']
+        for conv in raw_conv_dict:
+            text_tokens, movies = conv["text"], conv["movie"]
 
             if self.replace_token is not None and text_tokens.count(30000) != len(movies):
                 continue  # the number of slots doesn't equal to the number of movies
             
-            if len(context_tokens) > 0:
+            if context_tokens:
                 augmented_conv_dicts.append(create_conv_dict(conv))
             
             add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
