@@ -192,89 +192,74 @@ class TransformerModel(BaseModel):
 
     def _decode_beam_search_with_kg(self, token_encoding, beam=4):
         batch_size = token_encoding[0].shape[0]
-        xs = self._starts(batch_size).long().reshape(1, batch_size, -1)
-        incr_state = None
-        sequences = self._initialize_sequences(batch_size)
-        
+        xs, sequences, incr_state = self._initialize_beam_search(batch_size)
+
         for i in range(self.longest_label):
             if i == 1:
                 token_encoding = self._repeat_token_encoding(token_encoding, beam)
+            
             if i != 0:
-                xs = self._prepare_xs(sequences, beam, batch_size)
+                xs = self._get_xs_from_sequences(sequences, batch_size, beam)
 
-            dialog_latent, incr_state = self._decode(xs, token_encoding, incr_state)
-            gen_logits = self._generate_logits(dialog_latent)
-            probs, preds = self._calculate_probabilities(gen_logits, beam)
+            logits, probs, preds = self._compute_logits_and_probs(xs, token_encoding, incr_state, sequences, batch_size, beam)
             
-            sequences = self._update_sequences(sequences, probs, preds, xs, beam, batch_size)
-            
-            if self._check_if_finished(xs, batch_size):
+            sequences = self._update_sequences(sequences, xs, logits, probs, preds, batch_size, beam)
+
+            if self._is_generation_finished(xs, batch_size):
                 break
-        
-        logits, xs = self._extract_final_outputs(sequences)
-        return logits, xs
 
-    def _initialize_sequences(self, batch_size):
-        return [[[list(), list(), 1.0]] * 4] * batch_size
+        return self._get_final_outputs(sequences)
+
+    def _initialize_beam_search(self, batch_size):
+        xs = self._starts(batch_size).long().reshape(1, batch_size, -1)
+        sequences = [[[list(), list(), 1.0]]] * batch_size
+        incr_state = None
+        return xs, sequences, incr_state
 
     def _repeat_token_encoding(self, token_encoding, beam):
         return (token_encoding[0].repeat(beam, 1, 1), token_encoding[1].repeat(beam, 1, 1))
 
-    def _prepare_xs(self, sequences, beam, batch_size):
-        xs = []
-        for d in range(len(sequences[0])):
-            for j in range(batch_size):
-                text = sequences[j][d][0]
-                xs.append(text)
+    def _get_xs_from_sequences(self, sequences, batch_size, beam):
+        xs = [sequences[j][d][0] for d in range(len(sequences[0])) for j in range(batch_size)]
         return torch.stack(xs).reshape(beam, batch_size, -1)
 
-    def _decode(self, xs, token_encoding, incr_state):
-        dialog_latent, incr_state = self.conv_decoder(
-            xs.reshape(len(sequences[0]) * batch_size, -1),
-            token_encoding,
-            incr_state
-        )
-        return dialog_latent[:, -1:, :], incr_state
-
-    def _generate_logits(self, dialog_latent):
-        return F.linear(dialog_latent, self.token_embedding.weight)
-
-    def _calculate_probabilities(self, gen_logits, beam):
+    def _compute_logits_and_probs(self, xs, token_encoding, incr_state, sequences, batch_size, beam):
+        dialog_latent, incr_state = self.conv_decoder(xs.reshape(len(sequences[0]) * batch_size, -1),
+                                                    token_encoding,
+                                                    incr_state)
+        dialog_latent = dialog_latent[:, -1:, :]
+        gen_logits = F.linear(dialog_latent, self.token_embedding.weight)
         logits = gen_logits.reshape(len(sequences[0]), batch_size, 1, -1)
-        probs, preds = torch.nn.functional.softmax(logits, dim=-1).topk(beam, dim=-1)
-        return probs, preds
+        probs, preds = torch.nn.functional.softmax(logits).topk(beam, dim=-1)
+        return logits, probs, preds
 
-    def _update_sequences(self, sequences, probs, preds, xs, beam, batch_size):
+    def _update_sequences(self, sequences, xs, logits, probs, preds, batch_size, beam):
+        new_sequences = []
         for j in range(batch_size):
-            all_candidates = self._collect_candidates(sequences[j], probs, preds, xs, j, beam)
-            sequences[j] = sorted(all_candidates, key=lambda tup: tup[2], reverse=True)[:beam]
-        return sequences
+            all_candidates = self._generate_candidates(sequences[j], xs, logits, probs, preds, j, beam)
+            ordered = sorted(all_candidates, key=lambda tup: tup[2], reverse=True)
+            new_sequences.append(ordered[:beam])
+        return new_sequences
 
-    def _collect_candidates(self, sequence, probs, preds, xs, batch_idx, beam):
-        all_candidates = []
+    def _generate_candidates(self, sequence, xs, logits, probs, preds, j, beam):
+        candidates = []
         for n in range(len(sequence)):
             for k in range(beam):
                 prob = sequence[n][2]
                 logit = sequence[n][1]
-                logit_tmp = self._update_logit(logit, logits[n][batch_idx][0])
-                seq_tmp = torch.cat((xs[n][batch_idx].reshape(-1), preds[n][batch_idx][0][k].reshape(-1)))
-                candidate = [seq_tmp, logit_tmp, prob * probs[n][batch_idx][0][k]]
-                all_candidates.append(candidate)
-        return all_candidates
+                logit_tmp = logits[n][j][0].unsqueeze(0) if logit == [] else torch.cat((logit, logits[n][j][0].unsqueeze(0)), dim=0)
+                seq_tmp = torch.cat((xs[n][j].reshape(-1), preds[n][j][0][k].reshape(-1)))
+                candidate = [seq_tmp, logit_tmp, prob * probs[n][j][0][k]]
+                candidates.append(candidate)
+        return candidates
 
-    def _update_logit(self, logit, new_logit):
-        if logit == []:
-            return new_logit.unsqueeze(0)
-        return torch.cat((logit, new_logit.unsqueeze(0)), dim=0)
-
-    def _check_if_finished(self, xs, batch_size):
+    def _is_generation_finished(self, xs, batch_size):
         return ((xs == self.end_token_idx).sum(dim=1) > 0).sum().item() == batch_size
 
-    def _extract_final_outputs(self, sequences):
+    def _get_final_outputs(self, sequences):
         logits = torch.stack([seq[0][1] for seq in sequences])
         xs = torch.stack([seq[0][0] for seq in sequences])
         return logits, xs
-
 
     def forward(self, batch, mode):
         context_tokens, context_entities, context_words, response = batch
