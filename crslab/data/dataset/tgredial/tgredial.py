@@ -298,7 +298,7 @@ class TGReDialDataset(BaseDataset):
                 continue  # the number of slots doesn't equal to the number of movies
             
             if context_tokens:
-                augmented_conv_dicts.append(create_conv_dict(conv, context_tokens, context_entities, context_words, context_policy, context_items))
+                augmented_conv_dicts.append(self.create_conv_dict(conv, context_tokens, context_entities, context_words, context_policy, context_items))
             
             self.add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set)
         
