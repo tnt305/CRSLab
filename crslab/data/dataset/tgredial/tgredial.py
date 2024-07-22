@@ -255,7 +255,7 @@ class TGReDialDataset(BaseDataset):
         return [[self.tok2ind.get(token, self.unk_token_idx) for token in sent] for sent in user_profile]
 
 
-    def add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set):
+    def add_context(self, context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set):
         context_tokens.append(conv["text"])
         context_policy.append(conv['policy'])
         context_items += conv["movie"]
@@ -270,7 +270,7 @@ class TGReDialDataset(BaseDataset):
                 word_set.add(word)
                 context_words.append(word)
 
-    def create_conv_dict(conv, context_tokens, context_entities, context_words, context_policy, context_items):
+    def create_conv_dict(self, conv, context_tokens, context_entities, context_words, context_policy, context_items):
         return {
             'role': conv['role'],
             'user_profile': conv['user_profile'],
