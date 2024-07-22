@@ -119,28 +119,28 @@ class GPT2Model(BaseModel):
         loss = self.loss(logit.reshape(-1, logit.size(-1)), labels.reshape(-1))
         return loss
 
-    def prepare_context(context, context_former, sequences, batch_size, device):
+    def prepare_context(self, context, context_former, sequences, batch_size):
         if sequences != [[[list(), 1.0]]] * batch_size:
             context = []
             for i in range(batch_size):
                 for cand in sequences[i]:
                     text = torch.cat(
-                        (context_former[i], torch.tensor(cand[0]).to(device))
+                        (context_former[i], torch.tensor(cand[0]).to(self.device))
                     )
                     context.append(text)
             context = torch.stack(context)
         return context
 
-    def get_topk_predictions(context, model, beam):
+    def get_topk_predictions(self, context, beam):
         with torch.no_grad():
-            outputs = model(context)
+            outputs = self.model(context)
         last_hidden_state = outputs.logits
         next_token_logits = last_hidden_state[:, -1, :]
         next_token_probs = torch.nn.functional.softmax(next_token_logits, dim=-1)
         topk = torch.topk(next_token_probs, beam, dim=-1)
         return topk.values, topk.indices
 
-    def update_sequences(sequences, preds, probs, batch_size, beam):
+    def update_sequences(self, sequences, preds, probs, batch_size, beam):
         for j in range(batch_size):
             all_candidates = []
             for n in range(len(sequences[j])):
@@ -155,10 +155,10 @@ class GPT2Model(BaseModel):
             sequences[j] = ordered[:beam]
         return sequences
 
-    def build_result(sequences, batch_size, device):
+    def build_result(self, sequences, batch_size):
         res = []
         for i in range(batch_size):
-            res.append(torch.tensor(sequences[i][0][0]).to(device))
+            res.append(torch.tensor(sequences[i][0][0]).to(self.device))
         res = torch.stack(res)
         return res
 
@@ -169,9 +169,9 @@ class GPT2Model(BaseModel):
         sequences = [[[list(), 1.0]]] * batch_size
 
         for i in range(self.response_truncate - 1):
-            context = prepare_context(context, context_former, sequences, batch_size, self.device)
-            probs, preds = get_topk_predictions(context, self.model, beam)
-            sequences = update_sequences(sequences, preds, probs, batch_size, beam)
+            context = self.prepare_context(context, context_former, sequences, batch_size)
+            probs, preds = self.get_topk_predictions(context, beam)
+            sequences = self.update_sequences(sequences, preds, probs, batch_size, beam)
 
-        return build_result(sequences, batch_size, self.device)
+        return self.build_result(sequences, batch_size)
 
