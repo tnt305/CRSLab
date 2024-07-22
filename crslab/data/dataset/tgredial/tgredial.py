@@ -291,20 +291,23 @@ class TGReDialDataset(BaseDataset):
                 'final': conv['final'],
             }
 
+        def should_skip_conv(text_tokens, movies):
+            return self.replace_token is not None and text_tokens.count(30000) != len(movies)
+
+        def process_conv(conv):
+            if should_skip_conv(conv["text"], conv["movie"]):
+                return False
+            if context_tokens:
+                augmented_conv_dicts.append(create_conv_dict(conv))
+            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
+            return True
+
         augmented_conv_dicts = []
         context_tokens, context_entities, context_words, context_policy, context_items = [], [], [], [], []
         entity_set, word_set = set(), set()
 
         for conv in raw_conv_dict:
-            text_tokens, movies = conv["text"], conv["movie"]
-
-            if self.replace_token is not None and text_tokens.count(30000) != len(movies):
-                continue  # the number of slots doesn't equal to the number of movies
-            
-            if context_tokens:
-                augmented_conv_dicts.append(create_conv_dict(conv))
-            
-            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
+            process_conv(conv)
         
         return augmented_conv_dicts
 
