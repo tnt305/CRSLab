@@ -260,17 +260,21 @@ class TGReDialDataset(BaseDataset):
             context_tokens.append(conv["text"])
             context_policy.append(conv['policy'])
             context_items.extend(conv["movie"])
-            
-            for entity in conv["entity"] + conv["movie"]:
+            update_entities(context_entities, conv["entity"] + conv["movie"])
+            update_words(context_words, conv["word"])
+
+        def update_entities(context_entities, entities):
+            for entity in entities:
                 if entity not in entity_set:
                     entity_set.add(entity)
                     context_entities.append(entity)
-                    
-            for word in conv["word"]:
+
+        def update_words(context_words, words):
+            for word in words:
                 if word not in word_set:
                     word_set.add(word)
                     context_words.append(word)
-        
+
         def create_conv_dict(conv):
             return {
                 'role': conv['role'],
