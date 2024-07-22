@@ -260,21 +260,17 @@ class TGReDialDataset(BaseDataset):
             context_tokens.append(conv["text"])
             context_policy.append(conv['policy'])
             context_items.extend(conv["movie"])
-            update_entities(context_entities, conv["entity"] + conv["movie"])
-            update_words(context_words, conv["word"])
-
-        def update_entities(context_entities, entities):
-            for entity in entities:
+            
+            for entity in conv["entity"] + conv["movie"]:
                 if entity not in entity_set:
                     entity_set.add(entity)
                     context_entities.append(entity)
-
-        def update_words(context_words, words):
-            for word in words:
+                    
+            for word in conv["word"]:
                 if word not in word_set:
                     word_set.add(word)
                     context_words.append(word)
-
+        
         def create_conv_dict(conv):
             return {
                 'role': conv['role'],
@@ -291,24 +287,24 @@ class TGReDialDataset(BaseDataset):
                 'final': conv['final'],
             }
 
-        def should_skip_conv(text_tokens, movies):
-            return self.replace_token is not None and text_tokens.count(30000) != len(movies)
-
-        def process_conv(conv):
-            if should_skip_conv(conv["text"], conv["movie"]):
-                return False
-            if context_tokens:
-                augmented_conv_dicts.append(create_conv_dict(conv))
-            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
-            return True
+        def is_valid_conv(text_tokens, movies):
+            return self.replace_token is None or text_tokens.count(30000) == len(movies)
 
         augmented_conv_dicts = []
         context_tokens, context_entities, context_words, context_policy, context_items = [], [], [], [], []
         entity_set, word_set = set(), set()
 
         for conv in raw_conv_dict:
-            process_conv(conv)
-        
+            text_tokens, movies = conv["text"], conv["movie"]
+
+            if not is_valid_conv(text_tokens, movies):
+                continue  # the number of slots doesn't equal to the number of movies
+
+            add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv)
+            
+            if context_tokens:
+                augmented_conv_dicts.append(create_conv_dict(conv))
+
         return augmented_conv_dicts
 
 
