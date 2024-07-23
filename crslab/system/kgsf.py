@@ -75,42 +75,63 @@ class KGSFSystem(BaseSystem):
 
     def step(self, batch, stage, mode):
         batch = [ele.to(self.device) for ele in batch]
+        
         if stage == 'pretrain':
-            info_loss = self.model.forward(batch, stage, mode)
-            if info_loss is not None:
-                self.backward(info_loss.sum())
-                info_loss = info_loss.sum().item()
-                self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+            self._handle_pretrain_stage(batch, mode)
+            
         elif stage == 'rec':
-            rec_loss, info_loss, rec_predict = self.model.forward(batch, stage, mode)
-            if info_loss:
-                loss = rec_loss + 0.025 * info_loss
-            else:
-                loss = rec_loss
-            if mode == "train":
-                self.backward(loss.sum())
-            else:
-                self.rec_evaluate(rec_predict, batch[-1])
-            rec_loss = rec_loss.sum().item()
-            self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
-            if info_loss:
-                info_loss = info_loss.sum().item()
-                self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+            self._handle_rec_stage(batch, mode)
+            
         elif stage == "conv":
-            if mode != "test":
-                gen_loss, pred = self.model.forward(batch, stage, mode)
-                if mode == 'train':
-                    self.backward(gen_loss.sum())
-                else:
-                    self.conv_evaluate(pred, batch[-1])
-                gen_loss = gen_loss.sum().item()
-                self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
-                self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
-            else:
-                pred = self.model.forward(batch, stage, mode)
-                self.conv_evaluate(pred, batch[-1])
+            self._handle_conv_stage(batch, mode)
+            
         else:
-            raise
+            raise ValueError("Invalid stage provided: {}".format(stage))
+
+    def _handle_pretrain_stage(self, batch, mode):
+        info_loss = self.model.forward(batch, 'pretrain', mode)
+        
+        if info_loss is not None:
+            self.backward(info_loss.sum())
+            info_loss = info_loss.sum().item()
+            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+
+    def _handle_rec_stage(self, batch, mode):
+        rec_loss, info_loss, rec_predict = self.model.forward(batch, 'rec', mode)
+        
+        if info_loss:
+            loss = rec_loss + 0.025 * info_loss
+        else:
+            loss = rec_loss
+        
+        if mode == "train":
+            self.backward(loss.sum())
+        else:
+            self.rec_evaluate(rec_predict, batch[-1])
+        
+        rec_loss = rec_loss.sum().item()
+        self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
+        
+        if info_loss:
+            info_loss = info_loss.sum().item()
+            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+
+    def _handle_conv_stage(self, batch, mode):
+        if mode != "test":
+            gen_loss, pred = self.model.forward(batch, 'conv', mode)
+            
+            if mode == 'train':
+                self.backward(gen_loss.sum())
+            else:
+                self.conv_evaluate(pred, batch[-1])
+            
+            gen_loss = gen_loss.sum().item()
+            self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
+            self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
+        else:
+            pred = self.model.forward(batch, 'conv', mode)
+            self.conv_evaluate(pred, batch[-1])
+
 
     def pretrain(self):
         self.init_optim(self.pretrain_optim_opt, self.model.parameters())
