@@ -42,30 +42,44 @@ class BaseSystem(ABC):
     """Base class for all system"""
 
     def __init__(self, opt, train_dataloader, valid_dataloader, test_dataloader, vocab, side_data, restore_system=False,
-                 interact=False, debug=False, tensorboard=False):
-        """
+                    interact=False, debug=False, tensorboard=False):
+            """
+            Args:
+                opt (dict): Indicating the hyper parameters.
+                train_dataloader (BaseDataLoader): Indicating the train dataloader of corresponding dataset.
+                valid_dataloader (BaseDataLoader): Indicating the valid dataloader of corresponding dataset.
+                test_dataloader (BaseDataLoader): Indicating the test dataloader of corresponding dataset.
+                vocab (dict): Indicating the vocabulary.
+                side_data (dict): Indicating the side data.
+                restore_system (bool, optional): Indicating if we store system after training. Defaults to False.
+                interact (bool, optional): Indicating if we interact with system. Defaults to False.
+                debug (bool, optional): Indicating if we train in debug mode. Defaults to False.
+                tensorboard (bool, optional) Indicating if we monitor the training performance in tensorboard. Defaults to False. 
+            """
+            self.opt = opt
+            self._set_device(opt)
+            self._set_seed(opt)
+            self._set_dataloaders(train_dataloader, valid_dataloader, test_dataloader, debug)
+            self.vocab = vocab
+            self.side_data = side_data
+            self._set_models(opt, vocab, side_data)
+            self.model_file = os.path.join(SAVE_PATH, opt.get('model_file', f'{opt["model_name"]}.pth'))
+            
+            if restore_system:
+                self.restore_model()
+            
+            if not interact:
+                self.evaluator = get_evaluator(opt.get('evaluator', 'standard'), opt['dataset'], tensorboard)
 
-        Args:
-            opt (dict): Indicating the hyper parameters.
-            train_dataloader (BaseDataLoader): Indicating the train dataloader of corresponding dataset.
-            valid_dataloader (BaseDataLoader): Indicating the valid dataloader of corresponding dataset.
-            test_dataloader (BaseDataLoader): Indicating the test dataloader of corresponding dataset.
-            vocab (dict): Indicating the vocabulary.
-            side_data (dict): Indicating the side data.
-            restore_system (bool, optional): Indicating if we store system after training. Defaults to False.
-            interact (bool, optional): Indicating if we interact with system. Defaults to False.
-            debug (bool, optional): Indicating if we train in debug mode. Defaults to False.
-            tensorboard (bool, optional) Indicating if we monitor the training performance in tensorboard. Defaults to False. 
-
-        """
-        self.opt = opt
+    def _set_device(self, opt):
         if opt["gpu"] == [-1]:
             self.device = torch.device('cpu')
         elif len(opt["gpu"]) == 1:
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cuda')
-        # seed
+    # seed
+    def _set_seed(self, opt):
         if 'seed' in opt:
             seed = int(opt['seed'])
             random.seed(seed)
@@ -74,7 +88,8 @@ class BaseSystem(ABC):
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             logger.info(f'[Set seed] {seed}')
-        # data
+    # data
+    def _set_dataloaders(self, train_dataloader, valid_dataloader, test_dataloader, debug):
         if debug:
             self.train_dataloader = valid_dataloader
             self.valid_dataloader = valid_dataloader
@@ -83,28 +98,17 @@ class BaseSystem(ABC):
             self.train_dataloader = train_dataloader
             self.valid_dataloader = valid_dataloader
             self.test_dataloader = test_dataloader
-        self.vocab = vocab
-        self.side_data = side_data
-        # model
+    # model
+    def _set_models(self, opt, vocab, side_data):
         if 'model' in opt:
             self.model = get_model(opt, opt['model'], self.device, vocab, side_data).to(self.device)
         else:
             if 'rec_model' in opt:
-                self.rec_model = get_model(opt, opt['rec_model'], self.device, vocab['rec'], side_data['rec']).to(
-                    self.device)
+                self.rec_model = get_model(opt, opt['rec_model'], self.device, vocab['rec'], side_data['rec']).to(self.device)
             if 'conv_model' in opt:
-                self.conv_model = get_model(opt, opt['conv_model'], self.device, vocab['conv'], side_data['conv']).to(
-                    self.device)
+                self.conv_model = get_model(opt, opt['conv_model'], self.device, vocab['conv'], side_data['conv']).to(self.device)
             if 'policy_model' in opt:
-                self.policy_model = get_model(opt, opt['policy_model'], self.device, vocab['policy'],
-                                              side_data['policy']).to(self.device)
-        model_file_name = opt.get('model_file', f'{opt["model_name"]}.pth')
-        self.model_file = os.path.join(SAVE_PATH, model_file_name)
-        if restore_system:
-            self.restore_model()
-
-        if not interact:
-            self.evaluator = get_evaluator(opt.get('evaluator', 'standard'), opt['dataset'], tensorboard)
+                self.policy_model = get_model(opt, opt['policy_model'], self.device, vocab['policy'], side_data['policy']).to(self.device)
 
     def init_optim(self, opt, parameters):
         self.optim_opt = opt
