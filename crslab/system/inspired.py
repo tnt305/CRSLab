@@ -91,43 +91,55 @@ class InspiredSystem(BaseSystem):
     def step(self, batch, stage, mode):
         """
         stage: ['policy', 'rec', 'conv']
-        mode: ['train', 'val', 'test]
+        mode: ['train', 'val', 'test']
         """
         batch = [ele.to(self.device) for ele in batch]
+        
         if stage == 'rec':
-            if mode == 'train':
-                self.rec_model.train()
-            else:
-                self.rec_model.eval()
-
-            rec_loss, rec_predict = self.rec_model.recommend(batch, mode)
-            if mode == "train":
-                self.backward(rec_loss)
-            else:
-                self.rec_evaluate(rec_predict, batch[-1])
-            rec_loss = rec_loss.item()
-            self.evaluator.optim_metrics.add("rec_loss",
-                                             AverageMetric(rec_loss))
+            self._handle_rec_stage(batch, mode)
+            
         elif stage == "conv":
-            if mode != "test":
-                # train + valid: need to compute ppl
-                gen_loss, pred = self.conv_model.converse(batch, mode)
-                if mode == 'train':
-                    self.conv_model.train()
-                    self.backward(gen_loss)
-                else:
-                    self.conv_model.eval()
-                    self.conv_evaluate(pred, batch[-1])
-                gen_loss = gen_loss.item()
-                self.evaluator.optim_metrics.add("gen_loss",
-                                                 AverageMetric(gen_loss))
-                self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
-            else:
-                # generate response in conv_model.step
-                pred = self.conv_model.converse(batch, mode)
-                self.conv_evaluate(pred, batch[-1])
+            self._handle_conv_stage(batch, mode)
+            
         else:
-            raise
+            raise ValueError("Invalid stage provided: {}".format(stage))
+
+    def _handle_rec_stage(self, batch, mode):
+        if mode == 'train':
+            self.rec_model.train()
+        else:
+            self.rec_model.eval()
+            
+        rec_loss, rec_predict = self.rec_model.recommend(batch, mode)
+        
+        if mode == "train":
+            self.backward(rec_loss)
+        else:
+            self.rec_evaluate(rec_predict, batch[-1])
+            
+        rec_loss = rec_loss.item()
+        self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
+
+    def _handle_conv_stage(self, batch, mode):
+        if mode != "test":
+            # train + valid: need to compute ppl
+            gen_loss, pred = self.conv_model.converse(batch, mode)
+            
+            if mode == 'train':
+                self.conv_model.train()
+                self.backward(gen_loss)
+            else:
+                self.conv_model.eval()
+                self.conv_evaluate(pred, batch[-1])
+                
+            gen_loss = gen_loss.item()
+            self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
+            self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
+            
+        else:
+            # generate response in conv_model.step
+            pred = self.conv_model.converse(batch, mode)
+            self.conv_evaluate(pred, batch[-1])
 
     def train_recommender(self):
         if hasattr(self.rec_model, 'bert'):
