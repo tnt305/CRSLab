@@ -27,15 +27,15 @@ def neginf(dtype):
         return -NEAR_INF
 
 
-def _create_selfattn_mask(x):
-    # figure out how many timestamps we need
-    bsz = x.size(0)
-    time = x.size(1)
-    # make sure that we don't look into the future
-    mask = torch.tril(x.new(time, time).fill_(1))
-    # broadcast across batch
-    mask = mask.unsqueeze(0).expand(bsz, -1, -1)
-    return mask
+# def _create_selfattn_mask(x):
+#     # figure out how many timestamps we need
+#     bsz = x.size(0)
+#     time = x.size(1)
+#     # make sure that we don't look into the future
+#     mask = torch.tril(x.new(time, time).fill_(1))
+#     # broadcast across batch
+#     mask = mask.unsqueeze(0).expand(bsz, -1, -1)
+#     return mask
 
 
 def create_position_codes(n_pos, dim, out):
