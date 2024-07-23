@@ -69,58 +69,77 @@ class NTRDSystem(BaseSystem):
             p_str = p_str[1:]
             r_str = ind2txt_with_slots(r, movie_response, self.ind2tok, self.end_token_idx)
             self.evaluator.gen_evaluate(p_str, [r_str])
-    
+        
     def step(self, batch, stage, mode):
         '''
         converse:
-        context_tokens, context_entities, context_words, response,all_movies = batch
-
-        recommend
+        context_tokens, context_entities, context_words, response, all_movies = batch
+        recommend:
         context_entities, context_words, entities, movie = batch
         '''
         batch = [ele.to(self.device) for ele in batch]
+        
         if stage == 'pretrain':
-            info_loss = self.model.forward(batch, stage, mode)
-            if info_loss is not None:
-                self.backward(info_loss.sum())
-                info_loss = info_loss.sum().item()
-                self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+            self._handle_pretrain_stage(batch, mode)
+            
         elif stage == 'rec':
-            rec_loss, info_loss, rec_predict = self.model.forward(batch, stage, mode)
-            if info_loss:
-                loss = rec_loss + 0.025 * info_loss
-            else:
-                loss = rec_loss
-            if mode == "train":
-                self.backward(loss.sum())
-            else:
-                self.rec_evaluate(rec_predict, batch[-1])
-            rec_loss = rec_loss.sum().item()
-            self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
-            if info_loss:
-                info_loss = info_loss.sum().item()
-                self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+            self._handle_rec_stage(batch, mode)
+            
         elif stage == "conv":
-            if mode != "test":
-                gen_loss,selection_loss,pred = self.model.forward(batch, stage, mode)
-                if mode == 'train':
-                    loss = self.gen_loss_weight * gen_loss + selection_loss
-                    self.backward(loss.sum())
-                    loss = loss.sum().item()
-                    self.evaluator.optim_metrics.add("gen_total_loss", AverageMetric(loss))
-                gen_loss = gen_loss.sum().item()
-                
-
-                self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
-                self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
-                selection_loss = selection_loss.sum().item()
-                self.evaluator.optim_metrics.add('sel_loss',AverageMetric(selection_loss))
-
-            else:
-                pred,matching_pred,matching_logist = self.model.forward(batch, stage, mode)
-                self.conv_evaluate(pred,matching_pred,batch[-2],batch[-1])
+            self._handle_conv_stage(batch, mode)
+            
         else:
-            raise
+            raise ValueError(f"Invalid stage provided: {stage}")
+
+    def _handle_pretrain_stage(self, batch, mode):
+        info_loss = self.model.forward(batch, 'pretrain', mode)
+        
+        if info_loss is not None:
+            self.backward(info_loss.sum())
+            info_loss = info_loss.sum().item()
+            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+
+    def _handle_rec_stage(self, batch, mode):
+        rec_loss, info_loss, rec_predict = self.model.forward(batch, 'rec', mode)
+        
+        if info_loss:
+            loss = rec_loss + 0.025 * info_loss
+        else:
+            loss = rec_loss
+        
+        if mode == "train":
+            self.backward(loss.sum())
+        else:
+            self.rec_evaluate(rec_predict, batch[-1])
+        
+        rec_loss = rec_loss.sum().item()
+        self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
+        
+        if info_loss:
+            info_loss = info_loss.sum().item()
+            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+
+    def _handle_conv_stage(self, batch, mode):
+        if mode != "test":
+            gen_loss, selection_loss, pred = self.model.forward(batch, 'conv', mode)
+            
+            if mode == 'train':
+                loss = self.gen_loss_weight * gen_loss + selection_loss
+                self.backward(loss.sum())
+                loss = loss.sum().item()
+                self.evaluator.optim_metrics.add("gen_total_loss", AverageMetric(loss))
+                
+            gen_loss = gen_loss.sum().item()
+            self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
+            self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
+            
+            selection_loss = selection_loss.sum().item()
+            self.evaluator.optim_metrics.add('sel_loss', AverageMetric(selection_loss))
+        
+        else:
+            pred, matching_pred, matching_logist = self.model.forward(batch, 'conv', mode)
+            self.conv_evaluate(pred, matching_pred, batch[-2], batch[-1])
+
 
 
 
