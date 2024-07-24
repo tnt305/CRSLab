@@ -113,4 +113,5 @@ class NTRDDataLoader(BaseDataLoader):
                 padded_tensor(batch_all_movies, self.pad_entity_idx, pad_tail=False)) 
 
     def policy_batchify(self, *args, **kwargs):
+        # Placeholder for custom batch processing, some models may require this.
         pass

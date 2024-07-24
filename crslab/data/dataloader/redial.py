@@ -143,4 +143,5 @@ class ReDialDataLoader(BaseDataLoader):
                 'request_lengths': torch.tensor(batch_request_length), 'response': response}
 
     def policy_batchify(self, batch):
+        # Placeholder for custom batch processing, some models may require this.
         pass
