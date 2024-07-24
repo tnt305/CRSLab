@@ -74,7 +74,9 @@ class InspiredConvModel(BaseModel):
 
     def _process_iterations(self, roles, input_ids_iters, past, lm_logits_all):
         for turn, iter in enumerate(input_ids_iters):
-            if roles[turn] == 0:
+            if turn >= len(roles):
+                raise RuntimeError(f"Index out of bounds: turn {turn} >= len(roles) {len(roles)}")
+            if roles[turn] != 0:
                 past = self._check_and_reset_past(past, iter)
                 outputs = self.model_sk(iter, past_key_values=past)
             else:
