@@ -66,7 +66,7 @@ class ReDialConvModel(BaseModel):
         self.pretrained_embedding = side_data.get('embedding', None)
         self.embedding_dim = opt.get('embedding_dim', None)
         if opt.get('embedding', None) and self.embedding_dim is None:
-            raise
+            raise ValueError("Embedding dimension is not set but embedding option is provided.")
         # HRNN
         self.utterance_encoder_hidden_size = opt['utterance_encoder_hidden_size']
         self.dialog_encoder_hidden_size = opt['dialog_encoder_hidden_size']
