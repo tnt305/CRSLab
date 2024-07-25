@@ -1,7 +1,7 @@
 # dataset
 dataset: ReDial
 tokenize:
-  conv: gpt2
+  conv: nltk
 # dataloader
 context_truncate: 256
 response_truncate: 30
@@ -12,7 +12,7 @@ conv_model: GPT2
 # optim
 conv:
   epoch: 1
-  batch_size: 1
+  batch_size: 8
   gradient_clip: 1.0
   update_freq: 1
   optimizer:

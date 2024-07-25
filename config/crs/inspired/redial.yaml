@@ -2,7 +2,7 @@
 dataset: ReDial
 tokenize:
   rec: bert
-  conv: gpt2
+  conv: nltk
 # dataloader
 context_truncate: 256
 response_truncate: 30
