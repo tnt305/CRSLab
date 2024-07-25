@@ -14,8 +14,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from crslab.evaluator.base import BaseEvaluator
 from crslab.evaluator.utils import nice_report
-from .metrics import *
-
+from .metrics.base import Metrics, aggregate_unnamed_reports
+from .metrics.rec import HitMetric, NDCGMetric, MRRMetric
 
 class RecEvaluator(BaseEvaluator):
     """The evaluator specially for reommender model
