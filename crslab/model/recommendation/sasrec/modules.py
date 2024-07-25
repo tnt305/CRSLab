@@ -118,6 +118,7 @@ class SASRec(nn.Module):
         self.load_state_dict(load_states)
 
     def compute_loss(self, y_pred, y, subset='test'):
+        # Placeholder for method implementation
         pass
 
     def cross_entropy(self, seq_out, pos_ids, neg_ids):
