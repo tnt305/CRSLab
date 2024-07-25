@@ -205,10 +205,10 @@ class Metrics(object):
         return f'Metrics({repr(self._data)})'
 
     def get(self, key: str):
-        if key in self._data.keys():
+        try:
             return self._data[key].value()
-        else:
-            raise
+        except KeyError:
+            raise KeyError(f"Key '{key}' not found in _data")
 
     def __getitem__(self, item):
         return self.get(item)
