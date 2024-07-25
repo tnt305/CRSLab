@@ -114,4 +114,5 @@ class NTRDDataLoader(BaseDataLoader):
         ]
 
     def policy_batchify(self, *args, **kwargs):
+        # Optional policy function.
         pass
