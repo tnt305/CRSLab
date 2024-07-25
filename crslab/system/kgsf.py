@@ -207,4 +207,5 @@ class KGSFSystem(BaseSystem):
         self.train_conversation()
 
     def interact(self):
+        # Some model need this function
         pass

@@ -121,6 +121,7 @@ class ReduceLROnPlateau(LRScheduler):
                                                               min_lr=min_lr, eps=eps)
 
     def train_adjust(self):
+        # For generalization
         pass
 
     def valid_adjust(self, metric):
@@ -137,6 +138,7 @@ class StepLR(LRScheduler):
         self.scheduler = optim.lr_scheduler.StepLR(optimizer, step_size, gamma, last_epoch)
 
     def train_adjust(self):
+        # For generalization
         pass
 
     def valid_adjust(self, metric=None):
@@ -148,6 +150,7 @@ class ConstantLR(LRScheduler):
         super(ConstantLR, self).__init__(optimizer, warmup_steps)
 
     def train_adjust(self):
+        # For generalization
         pass
 
     def valid_adjust(self, metric):

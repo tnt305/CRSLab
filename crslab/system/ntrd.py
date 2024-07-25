@@ -217,6 +217,7 @@ class NTRDSystem(BaseSystem):
         self.train_conversation()
 
     def interact(self):
+        # Optional function
         pass
     
 

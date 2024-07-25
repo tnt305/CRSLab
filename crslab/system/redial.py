@@ -162,4 +162,5 @@ class ReDialSystem(BaseSystem):
         self.train_conversation()
 
     def interact(self):
+        # Optional function
         pass

@@ -218,4 +218,5 @@ class InspiredSystem(BaseSystem):
             self.train_conversation()
 
     def interact(self):
+        # Some models need this function
         pass
