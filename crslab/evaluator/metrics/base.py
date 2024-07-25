@@ -34,7 +34,7 @@ class Metric(ABC):
 
     @abstractmethod
     def __add__(self, other: Any) -> 'Metric':
-        raise NotImplementedError
+        return NotImplemented
 
     def __iadd__(self, other):
         return self.__radd__(other)
