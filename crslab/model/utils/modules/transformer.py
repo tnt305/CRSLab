@@ -101,11 +101,8 @@ class MultiHeadAttention(nn.Module):
             return tensor
         
         # If key and value are not provided, set them to query for self-attention
-        if key is None and value is None:
+        if key is None or value is None:
             key = value = query
-        elif value is None:
-            # If only key is provided, set value to key (self-attention scenario)
-            value = key
 
         _, key_len, dim = key.size()
         q = prepare_head(self.q_lin(query))
