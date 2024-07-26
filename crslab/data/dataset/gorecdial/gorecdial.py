@@ -213,7 +213,8 @@ class GoRecDialDataset(BaseDataset):
         self._update_entities_and_words(entities + movies, entity_set, context_entities)
         self._update_entities_and_words(words, word_set, context_words)
 
-    def _update_entities_and_words(self, items, item_set):
+    def _update_entities_and_words(self, items, item_set, context_list):
+        context_list = context_list
         for item in items:
             if item not in item_set:
                 item_set.add(item)

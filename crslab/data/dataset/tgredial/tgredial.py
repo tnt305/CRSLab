@@ -359,7 +359,7 @@ class TGReDialDataset(BaseDataset):
             e1 = self.word2id[triple[2]]
             edges.add((e0, e1))
             edges.add((e1, e0))
-        
+       
         return {
             'edge': list(edges),
             'entity': list(entities)
