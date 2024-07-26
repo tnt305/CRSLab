@@ -257,7 +257,7 @@ class DuRecDialDataset(BaseDataset):
             e1 = self.word2id[triple[2]]
             edges.add((e0, e1))
             edges.add((e1, e0))
-        # edge_set = [[co[0] for co in list(edges)], [co[1] for co in list(edges)]]
+       
         return {
             'edge': list(edges),
             'entity': list(entities)
