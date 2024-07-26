@@ -328,7 +328,7 @@ class TGReDialSystem(BaseSystem):
                 first_item_id = item_ids[:1]
                 self.update_context('rec', entity_ids=first_item_id, item_ids=first_item_id)
 
-                print(f"[Recommend]:")
+                print("[Recommend]:")
                 for item_id in item_ids:
                     if item_id in self.id2entity:
                         print(self.id2entity[item_id])
