@@ -171,7 +171,7 @@ class BaseSystem(ABC):
         elif self.optim_opt['stop_mode'] == 'min':
             self.stop_mode = -1
         else:
-            raise
+            raise ValueError("Invalid value for 'stop_mode'. Expected 'max' or 'min'.")
         logger.debug('[Reset early stop state]')
 
     @abstractmethod

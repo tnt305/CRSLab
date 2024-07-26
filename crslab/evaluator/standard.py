@@ -19,7 +19,7 @@ from torch.utils.tensorboard import SummaryWriter
 from crslab.evaluator.base import BaseEvaluator
 from crslab.evaluator.utils import nice_report
 from .embeddings import resources
-from .metrics import *
+from . import metrics
 from ..config import EMBEDDING_PATH
 from ..download import build
 
