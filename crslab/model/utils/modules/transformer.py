@@ -76,12 +76,11 @@ class MultiHeadAttention(nn.Module):
     def forward(self, query, key=None, value=None, mask=None):
         '''
         Input is [B, query_len, dim]
-        Mask is [B, key_len] (selfattn) or [B, key_len, key_len] (enc attn)
+        Mask is [B, key_len] (self-attn) or [B, key_len, key_len] (enc attn)
         '''
         
         batch_size, query_len, dim = query.size()
-        assert dim == self.dim, \
-            f'Dimensions do not match: {dim} query vs {self.dim} configured'
+        assert dim == self.dim, f'Dimensions do not match: {dim} query vs {self.dim} configured'
         assert mask is not None, 'Mask is None, please specify a mask'
         n_heads = self.n_heads
         dim_per_head = dim // n_heads
@@ -100,17 +99,15 @@ class MultiHeadAttention(nn.Module):
                 dim_per_head
             )
             return tensor
-
-        # q, k, v are the transformed values
+        
+        # If key and value are not provided, set them to query for self-attention
         if key is None and value is None:
-            # self attention
             key = value = query
         elif value is None:
-            # key and value are the same, but query differs
-            # self attention
+            # If only key is provided, set value to key (self-attention scenario)
             value = key
-        _, key_len, dim = key.size()
 
+        _, key_len, dim = key.size()
         q = prepare_head(self.q_lin(query))
         k = prepare_head(self.k_lin(key))
         v = prepare_head(self.v_lin(value))
@@ -126,10 +123,8 @@ class MultiHeadAttention(nn.Module):
         )
         assert attn_mask.shape == dot_prod.shape
         dot_prod.masked_fill_(attn_mask, neginf(dot_prod.dtype))
-
         attn_weights = F.softmax(dot_prod, dim=-1).type_as(query)
         attn_weights = self.attn_dropout(attn_weights)  # --attention-dropout
-
         attentioned = attn_weights.bmm(v)
         attentioned = (
             attentioned.type_as(query)
@@ -137,9 +132,7 @@ class MultiHeadAttention(nn.Module):
                 .transpose(1, 2).contiguous()
                 .view(batch_size, query_len, dim)
         )
-
         out = self.out_lin(attentioned)
-
         return out
 
 
