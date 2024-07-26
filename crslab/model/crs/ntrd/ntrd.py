@@ -225,7 +225,7 @@ class NTRDModel(BaseModel):
             embedding_size=self.token_emb_dim,
             ffn_size=self.ffn_size,
             vocabulary_size=self.n_movies_label,
-            # embedding=self.token_embedding,
+            
             dropout=self.dropout,
             attention_dropout=self.attention_dropout,
             relu_dropout=self.relu_dropout,
