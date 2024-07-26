@@ -38,7 +38,7 @@ def normalize_answer(s):
     s = re_punc.sub(' ', s)
     s = re_art.sub(' ', s)
     s = re_space.sub(' ', s)
-    # s = ' '.join(s.split())
+    
     return s
 
 

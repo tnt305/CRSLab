@@ -33,8 +33,8 @@ def float_formatter(f: Union[float, int]) -> str:
     """
     Format a float as a pretty string.
     """
-    if f != f:
-        # instead of returning nan, return "" so it shows blank in table
+    if math.isnan(f):
+        # Instead of returning NaN, return "" so it shows blank in table
         return ""
     if isinstance(f, int):
         # don't do any rounding of integers, leave them alone
