@@ -214,7 +214,8 @@ class GoRecDialDataset(BaseDataset):
         self._update_entities_and_words(words, word_set, context_words)
 
     def _update_entities_and_words(self, items, item_set, context_list):
-        context_list = context_list
+        # context_list is included as a parameter to ensure generalization for models that may use it.
+        _ = context_list  # This is a no-op, just to use the variable
         for item in items:
             if item not in item_set:
                 item_set.add(item)
