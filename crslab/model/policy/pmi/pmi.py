@@ -49,7 +49,7 @@ class PMIModel(BaseModel):
         self.last_topic_to_target_topic = defaultdict(int)
 
     def forward(self, batch, mode):
-        # context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, target = batch
+        
         context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, target = batch
 
         if mode == 'train':

@@ -74,8 +74,11 @@ class MultiHeadAttention(nn.Module):
         nn.init.xavier_normal_(self.out_lin.weight)
 
     def forward(self, query, key=None, value=None, mask=None):
-        # Input is [B, query_len, dim]
-        # Mask is [B, key_len] (selfattn) or [B, key_len, key_len] (enc attn)
+        '''
+        Input is [B, query_len, dim]
+        Mask is [B, key_len] (selfattn) or [B, key_len, key_len] (enc attn)
+        '''
+        
         batch_size, query_len, dim = query.size()
         assert dim == self.dim, \
             f'Dimensions do not match: {dim} query vs {self.dim} configured'
@@ -85,8 +88,10 @@ class MultiHeadAttention(nn.Module):
         scale = math.sqrt(dim_per_head)
 
         def prepare_head(tensor):
-            # input is [batch_size, seq_len, n_heads * dim_per_head]
-            # output is [batch_size * n_heads, seq_len, dim_per_head]
+            ''' 
+            input is [batch_size, seq_len, n_heads * dim_per_head]
+            output is [batch_size * n_heads, seq_len, dim_per_head]
+            '''
             bsz, seq_len, _ = tensor.size()
             tensor = tensor.view(batch_size, tensor.size(1), n_heads, dim_per_head)
             tensor = tensor.transpose(1, 2).contiguous().view(

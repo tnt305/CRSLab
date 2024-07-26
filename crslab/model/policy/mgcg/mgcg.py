@@ -88,7 +88,7 @@ class MGCGModel(BaseModel):
         return [torch.sum((ids != 0).long()).item() for ids in input]
 
     def forward(self, batch, mode):
-        # conv_id, message_id, context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y = batch
+        
         context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y = batch
 
         len_context = self.get_length(context)

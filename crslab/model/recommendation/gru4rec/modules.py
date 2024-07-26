@@ -22,17 +22,9 @@ class GRU4REC(nn.Module):
                           batch_first=True),
             'item_embeddings': Embedding(item_size, embedding_dim),
         })
-        # self.param = nn.ParameterDict({
-        #     'hidden_size': hidden_size
-        # })
+        
         self.hidden_size = hidden_size
-        # self.item_embeddings = Embedding(item_size, embedding_dim)
-        # self.gru = nn.GRU(embedding_dim,
-        #                   hidden_size,
-        #                   num_layers,
-        #                   dropout=dropout_hidden,
-        #                   batch_first=True)
-        # self.rec_loss = self.cross_entropy
+        
 
     def cross_entropy(self, seq_out, pos_ids, neg_ids):
         # [batch seq_len hidden_size]
