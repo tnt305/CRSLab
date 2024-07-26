@@ -143,7 +143,7 @@ def handle_retry(retry, exp_backoff, pbar):
         time.sleep(exp_backoff[retry])
 
 def validate_download(pbar, total_size, done, url):
-    pbar = pbar
+    _ = pbar # This is a no-op, just to use the variable to avoid conventional bugs
     if done < total_size:
         raise RuntimeError(f'Received less data than specified in Content-Length header for {url}. There may be a download problem.')
 
