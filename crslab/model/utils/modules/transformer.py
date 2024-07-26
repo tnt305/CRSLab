@@ -73,7 +73,7 @@ class MultiHeadAttention(nn.Module):
 
         nn.init.xavier_normal_(self.out_lin.weight)
 
-    def forward(self, query, key, value, mask):
+    def forward(self, query, key=None, value=None, mask=None):
         '''
         Input is [B, query_len, dim]
         Mask is [B, key_len] (selfattn) or [B, key_len, key_len] (enc attn)
