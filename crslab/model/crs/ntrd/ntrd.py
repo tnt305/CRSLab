@@ -84,7 +84,7 @@ class NTRDModel(BaseModel):
         self.response_truncate = opt.get('response_truncate', 20)
         # selector 
         self.n_movies = opt['n_movies']
-        # self.n_movies_label = opt['n_movies_label']
+        
         self.n_movies_label = 64362 # the number of entity2id
         # copy mask
         dataset = opt['dataset']
