@@ -337,9 +337,9 @@ class BaseSystem(ABC):
         elif language == 'en':
             language = 'english'
         else:
-            raise
+            raise ValueError("Invalid value for 'language'. Expected 'zh' or 'en'.")
         text = input(f"Enter Your Message in {language}: ")
-
+        
         if '[EXIT]' in text:
             self.finished = True
         return text
