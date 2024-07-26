@@ -8,7 +8,6 @@
 # @Email  : francis_kun_zhou@163.com, wxl1999@foxmail.com
 
 import os
-
 import torch
 from loguru import logger
 
@@ -19,27 +18,25 @@ from crslab.system.utils.functions import ind2txt
 
 
 class KGSFSystem(BaseSystem):
-    """This is the system for KGSF model"""
+    """System implementation for the KGSF model."""
 
-    def __init__(self, opt, train_dataloader, valid_dataloader, test_dataloader, vocab, side_data, restore_system=False,
-                 interact=False, debug=False, tensorboard=False):
+    def __init__(self, opt, train_dataloader, valid_dataloader, test_dataloader, vocab, side_data, 
+                 restore_system=False, interact=False, debug=False, tensorboard=False):
         """
-
         Args:
-            opt (dict): Indicating the hyper parameters.
-            train_dataloader (BaseDataLoader): Indicating the train dataloader of corresponding dataset.
-            valid_dataloader (BaseDataLoader): Indicating the valid dataloader of corresponding dataset.
-            test_dataloader (BaseDataLoader): Indicating the test dataloader of corresponding dataset.
-            vocab (dict): Indicating the vocabulary.
-            side_data (dict): Indicating the side data.
-            restore_system (bool, optional): Indicating if we store system after training. Defaults to False.
-            interact (bool, optional): Indicating if we interact with system. Defaults to False.
-            debug (bool, optional): Indicating if we train in debug mode. Defaults to False.
-            tensorboard (bool, optional) Indicating if we monitor the training performance in tensorboard. Defaults to False. 
-
+            opt (dict): Hyperparameters.
+            train_dataloader (BaseDataLoader): Training dataloader.
+            valid_dataloader (BaseDataLoader): Validation dataloader.
+            test_dataloader (BaseDataLoader): Testing dataloader.
+            vocab (dict): Vocabulary data.
+            side_data (dict): Additional data.
+            restore_system (bool): Whether to restore the system state after training. Default: False.
+            interact (bool): Whether to enable interaction mode. Default: False.
+            debug (bool): Whether to run in debug mode. Default: False.
+            tensorboard (bool): Whether to use TensorBoard for monitoring. Default: False.
         """
-        super(KGSFSystem, self).__init__(opt, train_dataloader, valid_dataloader, test_dataloader, vocab, side_data,
-                                         restore_system, interact, debug, tensorboard)
+        super(KGSFSystem, self).__init__(opt, train_dataloader, valid_dataloader, test_dataloader, 
+                                         vocab, side_data, restore_system, interact, debug, tensorboard)
 
         self.ind2tok = vocab['ind2tok']
         self.end_token_idx = vocab['end']
@@ -78,19 +75,15 @@ class KGSFSystem(BaseSystem):
         
         if stage == 'pretrain':
             self._handle_pretrain_stage(batch, mode)
-            
         elif stage == 'rec':
             self._handle_rec_stage(batch, mode)
-            
-        elif stage == "conv":
+        elif stage == 'conv':
             self._handle_conv_stage(batch, mode)
-            
         else:
-            raise ValueError("Invalid stage provided: {}".format(stage))
+            raise ValueError(f"Invalid stage provided: {stage}")
 
     def _handle_pretrain_stage(self, batch, mode):
         info_loss = self.model.forward(batch, 'pretrain', mode)
-        
         if info_loss is not None:
             self.backward(info_loss.sum())
             info_loss = info_loss.sum().item()
@@ -98,47 +91,36 @@ class KGSFSystem(BaseSystem):
 
     def _handle_rec_stage(self, batch, mode):
         rec_loss, info_loss, rec_predict = self.model.forward(batch, 'rec', mode)
-        
-        if info_loss:
-            loss = rec_loss + 0.025 * info_loss
-        else:
-            loss = rec_loss
+        loss = rec_loss + (0.025 * info_loss if info_loss else 0)
         
         if mode == "train":
             self.backward(loss.sum())
         else:
             self.rec_evaluate(rec_predict, batch[-1])
         
-        rec_loss = rec_loss.sum().item()
-        self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss))
-        
+        self.evaluator.optim_metrics.add("rec_loss", AverageMetric(rec_loss.sum().item()))
         if info_loss:
-            info_loss = info_loss.sum().item()
-            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss))
+            self.evaluator.optim_metrics.add("info_loss", AverageMetric(info_loss.sum().item()))
 
     def _handle_conv_stage(self, batch, mode):
-        if mode != "test":
+        if mode == "test":
+            pred = self.model.forward(batch, 'conv', mode)
+            self.conv_evaluate(pred, batch[-1])
+        else:
             gen_loss, pred = self.model.forward(batch, 'conv', mode)
-            
             if mode == 'train':
                 self.backward(gen_loss.sum())
             else:
                 self.conv_evaluate(pred, batch[-1])
-            
-            gen_loss = gen_loss.sum().item()
-            self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss))
-            self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss))
-        else:
-            pred = self.model.forward(batch, 'conv', mode)
-            self.conv_evaluate(pred, batch[-1])
-
+            self.evaluator.optim_metrics.add("gen_loss", AverageMetric(gen_loss.sum().item()))
+            self.evaluator.gen_metrics.add("ppl", PPLMetric(gen_loss.sum().item()))
 
     def pretrain(self):
         self.init_optim(self.pretrain_optim_opt, self.model.parameters())
 
         for epoch in range(self.pretrain_epoch):
             self.evaluator.reset_metrics()
-            logger.info(f'[Pretrain epoch {str(epoch)}]')
+            logger.info(f'[Pretrain epoch {epoch}]')
             for batch in self.train_dataloader.get_pretrain_data(self.pretrain_batch_size, shuffle=False):
                 self.step(batch, stage="pretrain", mode='train')
             self.evaluator.report()
@@ -148,23 +130,23 @@ class KGSFSystem(BaseSystem):
 
         for epoch in range(self.rec_epoch):
             self.evaluator.reset_metrics()
-            logger.info(f'[Recommendation epoch {str(epoch)}]')
+            logger.info(f'[Recommendation epoch {epoch}]')
             logger.info('[Train]')
             for batch in self.train_dataloader.get_rec_data(self.rec_batch_size, shuffle=False):
                 self.step(batch, stage='rec', mode='train')
             self.evaluator.report(epoch=epoch, mode='train')
-            # val
+
             logger.info('[Valid]')
             with torch.no_grad():
                 self.evaluator.reset_metrics()
                 for batch in self.valid_dataloader.get_rec_data(self.rec_batch_size, shuffle=False):
                     self.step(batch, stage='rec', mode='val')
                 self.evaluator.report(epoch=epoch, mode='val')
-                # early stop
+                
                 metric = self.evaluator.rec_metrics['hit@1'] + self.evaluator.rec_metrics['hit@50']
                 if self.early_stop(metric):
                     break
-        # test
+
         logger.info('[Test]')
         with torch.no_grad():
             self.evaluator.reset_metrics()
@@ -181,19 +163,19 @@ class KGSFSystem(BaseSystem):
 
         for epoch in range(self.conv_epoch):
             self.evaluator.reset_metrics()
-            logger.info(f'[Conversation epoch {str(epoch)}]')
+            logger.info(f'[Conversation epoch {epoch}]')
             logger.info('[Train]')
             for batch in self.train_dataloader.get_conv_data(batch_size=self.conv_batch_size, shuffle=False):
                 self.step(batch, stage='conv', mode='train')
             self.evaluator.report(epoch=epoch, mode='train')
-            # val
+
             logger.info('[Valid]')
             with torch.no_grad():
                 self.evaluator.reset_metrics()
                 for batch in self.valid_dataloader.get_conv_data(batch_size=self.conv_batch_size, shuffle=False):
                     self.step(batch, stage='conv', mode='val')
                 self.evaluator.report(epoch=epoch, mode='val')
-        # test
+
         logger.info('[Test]')
         with torch.no_grad():
             self.evaluator.reset_metrics()
@@ -207,5 +189,4 @@ class KGSFSystem(BaseSystem):
         self.train_conversation()
 
     def interact(self):
-        # Some model need this function
         pass
