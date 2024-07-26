@@ -154,6 +154,7 @@ class ConstantLR(LRScheduler):
         pass
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -212,6 +213,7 @@ class CosineAnnealingLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -224,6 +226,7 @@ class CosineAnnealingWarmRestartsLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -249,6 +252,7 @@ class TransformersLinearLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -268,6 +272,7 @@ class TransformersCosineLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -289,6 +294,7 @@ class TransformersCosineWithHardRestartsLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
 
 
@@ -316,4 +322,5 @@ class TransformersPolynomialDecayLR(LRScheduler):
         self.scheduler.step()
 
     def valid_adjust(self, metric):
+        # For generalization
         pass
