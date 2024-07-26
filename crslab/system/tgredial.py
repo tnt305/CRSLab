@@ -370,20 +370,15 @@ class TGReDialSystem(BaseSystem):
         elif self.language == 'en':
             tokens = self.tokenize(text, 'nltk')
         else:
-            raise
-
+            raise ValueError("Invalid value for 'language'. Expected 'zh' or 'en'.")
         entities = self.link(tokens, self.side_data[stage]['entity_kg']['entity'])
         words = self.link(tokens, self.side_data[stage]['word_kg']['entity'])
-
         if self.opt['tokenize'][stage] in ('gpt2', 'bert'):
             language = dataset_language_map[self.opt['dataset']]
             path = os.path.join(PRETRAIN_PATH, self.opt['tokenize'][stage], language)
             tokens = self.tokenize(text, 'bert', path)
-
         token_ids = [self.vocab[stage]['tok2ind'].get(token, self.vocab[stage]['unk']) for token in tokens]
-        entity_ids = [self.vocab[stage]['entity2id'][entity] for entity in entities if
-                      entity in self.vocab[stage]['entity2id']]
+        entity_ids = [self.vocab[stage]['entity2id'][entity] for entity in entities if entity in self.vocab[stage]['entity2id']]
         movie_ids = [entity_id for entity_id in entity_ids if entity_id in self.item_ids]
         word_ids = [self.vocab[stage]['word2id'][word] for word in words if word in self.vocab[stage]['word2id']]
-
         return token_ids, entity_ids, movie_ids, word_ids
