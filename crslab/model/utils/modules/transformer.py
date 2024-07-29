@@ -142,7 +142,6 @@ class TransformerFFN(nn.Module):
         self.lin2 = nn.Linear(dim_hidden, dim)
         nn.init.xavier_uniform_(self.lin1.weight)
         nn.init.xavier_uniform_(self.lin2.weight)
-        # TODO: initialize biases to 0
 
     def forward(self, x):
         x = F.relu(self.lin1(x))
