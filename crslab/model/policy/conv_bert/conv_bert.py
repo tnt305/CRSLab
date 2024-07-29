@@ -64,8 +64,8 @@ class ConvBERTModel(BaseModel):
         self.loss = nn.CrossEntropyLoss()
 
     def forward(self, batch, mode):
-        
-        context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y = batch
+        # context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y 
+        context, context_mask, _, _, _, _, y = batch
 
         context_rep = self.context_bert(
             context,

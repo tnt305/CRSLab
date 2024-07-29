@@ -114,7 +114,7 @@ class InspiredConvModel(BaseModel):
         former_hidden_state = None
         context = context[..., -self.response_truncate + 1:]
 
-        for i in range(self.response_truncate - 1):
+        for _ in range(self.response_truncate - 1):
             last_hidden_state_all = []
             context_iters = context.unsqueeze(1)
             for turn, iter in enumerate(context_iters):

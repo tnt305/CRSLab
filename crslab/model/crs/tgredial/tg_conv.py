@@ -95,7 +95,7 @@ class TGConvModel(BaseModel):
         former_hidden_state = None
         context = context[..., -self.response_truncate + 1:]
 
-        for i in range(self.response_truncate - 1):
+        for _ in range(self.response_truncate - 1):
             outputs = self.model(context, former_hidden_state)  # (bs, c_t, v_s),
             last_hidden_state, former_hidden_state = outputs.logits, outputs.past_key_values
 

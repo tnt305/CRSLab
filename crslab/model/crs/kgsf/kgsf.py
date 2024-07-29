@@ -343,8 +343,8 @@ class KGSFModel(BaseModel):
 
             if i != 0:
                 inputs = self._get_inputs_from_sequences(sequences, beam, batch_size)
-
-            logits, copy_logits, gen_logits = self._compute_logits(inputs, token_encoding, word_reps, word_mask, entity_reps, entity_mask, incr_state, entity_emb_attn, word_emb_attn)
+            #logits, copy_logits, gen_logits
+            logits, _, _ = self._compute_logits(inputs, token_encoding, word_reps, word_mask, entity_reps, entity_mask, incr_state, entity_emb_attn, word_emb_attn)
             
             probs, preds = self._get_top_k_probabilities(logits, beam)
             

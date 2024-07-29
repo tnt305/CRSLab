@@ -212,13 +212,13 @@ class KBRDModel(BaseModel):
         xs = self._starts(bsz)
         incr_state = None
         logits = []
-        for i in range(self.longest_label):
+        for _ in range(self.longest_label):
             scores, incr_state = self.decoder(xs, encoder_states, incr_state)  # incr_state is always None
             scores = scores[:, -1:, :]
             token_logits = F.linear(scores, self.token_embedding.weight)
             user_logits = self.user_proj_2(torch.relu(self.user_proj_1(user_embedding))).unsqueeze(1)
             sum_logits = token_logits + user_logits
-            probs, preds = sum_logits.max(dim=-1)
+            _, preds = sum_logits.max(dim=-1) # probs, preds
             logits.append(scores)
             xs = torch.cat([xs, preds], dim=1)
             # check if everyone has generated an end token
