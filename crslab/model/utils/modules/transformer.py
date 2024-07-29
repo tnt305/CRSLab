@@ -91,7 +91,8 @@ class MultiHeadAttention(nn.Module):
             input is [batch_size, seq_len, n_heads * dim_per_head]
             output is [batch_size * n_heads, seq_len, dim_per_head]
             '''
-            bsz, seq_len, _ = tensor.size()
+
+            _, seq_len, _ = tensor.size() # bsz, seq_len, _
             tensor = tensor.view(batch_size, tensor.size(1), n_heads, dim_per_head)
             tensor = tensor.transpose(1, 2).contiguous().view(
                 batch_size * n_heads,
