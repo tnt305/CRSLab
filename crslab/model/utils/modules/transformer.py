@@ -64,7 +64,7 @@ class MultiHeadAttention(nn.Module):
         self.q_lin = nn.Linear(dim, dim)
         self.k_lin = nn.Linear(dim, dim)
         self.v_lin = nn.Linear(dim, dim)
-        # TODO: merge for the initialization step
+        
         nn.init.xavier_normal_(self.q_lin.weight)
         nn.init.xavier_normal_(self.k_lin.weight)
         nn.init.xavier_normal_(self.v_lin.weight)
