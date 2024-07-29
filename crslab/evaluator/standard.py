@@ -19,7 +19,12 @@ from torch.utils.tensorboard import SummaryWriter
 from crslab.evaluator.base import BaseEvaluator
 from crslab.evaluator.utils import nice_report
 from .embeddings import resources
-from .metrics import *
+from .metrics import (
+    Metric, Metrics, aggregate_unnamed_reports, AverageMetric,
+    BleuMetric, ExactMatchMetric, F1Metric, DistMetric,
+    EmbeddingAverage, VectorExtrema, GreedyMatch,
+    HitMetric, NDCGMetric, MRRMetric
+)
 from ..config import EMBEDDING_PATH
 from ..download import build
 
