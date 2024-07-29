@@ -46,7 +46,8 @@ class PopularityModel(BaseModel):
         logger.debug('[Finish build rec layer]')
 
     def forward(self, batch, mode):
-        context, mask, input_ids, target_pos, input_mask, sample_negs, y = batch
+        # context, mask, input_ids, target_pos, input_mask, sample_negs, y
+        _, _, input_ids, _, _, _, y = batch
         if mode == 'train':
             for ids in input_ids:
                 for id in ids:
