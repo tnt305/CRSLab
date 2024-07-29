@@ -66,7 +66,6 @@ class DownloadableFile:
                 )
             else:
                 logger.debug("Checksum Successful")
-                pass
 
     def download_file(self, dpath):
         if self.from_google:
