@@ -122,15 +122,14 @@ class MGCGModel(BaseModel):
                                self.hidden_size).to(self.device))
 
         # batch, seq_len, num_directions * hidden_size        # num_layers * num_directions, batch, hidden_size
-        context_output, (context_h, _) = self.context_lstm(context, init_h0)
-        topic_output, (topic_h, _) = self.topic_lstm(topic_path_kw, init_h0)
+        _, (context_h, _) = self.context_lstm(context, init_h0) # context_output, (context_h, _)
+        _, (topic_h, _) = self.topic_lstm(topic_path_kw, init_h0) # topic_output, (topic_h, _)
         # batch*sent_num, seq_len, num_directions * hidden_size
         init_h0 = (torch.zeros(self.num_layers, bs * self.n_sent,
                                self.hidden_size).to(self.device),
                    torch.zeros(self.num_layers, bs * self.n_sent,
                                self.hidden_size).to(self.device))
-        profile_output, (profile_h,
-                         _) = self.profile_lstm(user_profile, init_h0)
+        _, (profile_h, _) = self.profile_lstm(user_profile, init_h0) # profile_output, (profile_h, _)
 
         # batch, hidden_size
         context_rep = context_h[-1]
