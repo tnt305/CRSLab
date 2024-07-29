@@ -65,7 +65,8 @@ class GPT2Model(BaseModel):
         self.loss = CrossEntropyLoss(ignore_index=self.pad_id)
 
     def forward(self, batch, mode):
-        _, _, input_ids, context, _, _, y = batch
+        #  _, _, input_ids, context, _, _, y
+        _, _, input_ids, context, _, _, _ = batch
         if mode != 'test':
             # torch.tensor's shape = (bs, seq_len, v_s); tuple's length = 12
             lm_logits = self.model(input_ids).logits
@@ -94,7 +95,7 @@ class GPT2Model(BaseModel):
         former_hidden_state = None
         context = context[..., -self.response_truncate + 1:]
 
-        for i in range(self.response_truncate - 1):
+        for _ in range(self.response_truncate - 1):
             outputs = self.model(context, former_hidden_state)  # (bs, c_t, v_s),
             last_hidden_state, former_hidden_state = outputs.logits, outputs.past_key_values
 
@@ -168,7 +169,7 @@ class GPT2Model(BaseModel):
         batch_size = context.shape[0]
         sequences = [[[list(), 1.0]]] * batch_size
 
-        for i in range(self.response_truncate - 1):
+        for _ in range(self.response_truncate - 1):
             context = self.prepare_context(context, context_former, sequences, batch_size)
             probs, preds = self.get_topk_predictions(context, beam)
             sequences = self.update_sequences(sequences, preds, probs, batch_size, beam)

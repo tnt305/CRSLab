@@ -160,7 +160,7 @@ class TransformerModel(BaseModel):
         return self.START.detach().expand(batch_size, 1)
 
     def _decode_forced_with_kg(self, token_encoding, response):
-        batch_size, seq_len = response.shape
+        batch_size, _ = response.shape # batch_size, seq_len
         start = self._starts(batch_size)
         inputs = torch.cat((start, response[:, :-1]), dim=-1).long()
 
@@ -262,7 +262,7 @@ class TransformerModel(BaseModel):
         return logits, xs
 
     def forward(self, batch, mode):
-        context_tokens, context_entities, context_words, response = batch
+        context_tokens, _, _, response = batch # context_tokens, context_entities, context_words, response
 
         # encoder-decoder
         tokens_encoding = self.conv_encoder(context_tokens)
