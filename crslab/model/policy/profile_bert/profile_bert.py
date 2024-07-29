@@ -68,7 +68,8 @@ class ProfileBERTModel(BaseModel):
         self.loss = nn.CrossEntropyLoss()
 
     def forward(self, batch, mode):
-        context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y = batch
+        # context, context_mask, topic_path_kw, tp_mask, user_profile, profile_mask, y
+        _, _, _, _, user_profile, profile_mask, y = batch
 
         bs = user_profile.size(0) // self.n_sent
         profile_rep = self.profile_bert(
