@@ -124,7 +124,8 @@ class GRU4RECModel(BaseModel):
             input_ids: padding in left, [pad, pad, id1, id2, ..., idn]
             target_ids: padding in left, [pad, pad, id2, id3, ..., y]
         """
-        context, mask, input_ids, target_pos, input_mask, sample_negs, y = batch
+        # context, mask, input_ids, target_pos, input_mask, sample_negs, y
+        _, _, input_ids, target_pos, input_mask, sample_negs, _ = batch
 
         input_ids, input_len, input_mask = self.reconstruct_input(input_ids)
         target_pos, _, _ = self.reconstruct_input(target_pos)
