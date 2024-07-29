@@ -74,7 +74,8 @@ class TextCNNModel(BaseModel):
         logger.debug('[Finish build rec layer]')
 
     def forward(self, batch, mode):
-        context, mask, input_ids, target_pos, input_mask, sample_negs, y = batch
+        # context, mask, input_ids, target_pos, input_mask, sample_negs, y 
+        context, _, _, _, _, _, y = batch
 
         out = self.embedding(context)
         out = out.unsqueeze(1)
