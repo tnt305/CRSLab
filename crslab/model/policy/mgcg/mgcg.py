@@ -95,7 +95,8 @@ class MGCGModel(BaseModel):
         len_tp = self.get_length(topic_path_kw)
         len_profile = self.get_length(user_profile)
 
-        bs_, word_num = user_profile.shape
+        # bs_, word_num
+        bs_, _ = user_profile.shape
         bs = bs_ // self.n_sent
 
         context = self.embeddings(context)
