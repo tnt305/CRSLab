@@ -136,7 +136,7 @@ class GRU4RECModel(BaseModel):
             embedded, input_len, enforce_sorted=False,
             batch_first=True)  # (num_layers , batch, hidden_size)
 
-        output, hidden = self.gru(embedded)
+        output, _ = self.gru(embedded) # output, hidden
         output, output_len = pad_packed_sequence(output, batch_first=True)
 
         batch, seq_len, hidden_size = output.size()
