@@ -79,7 +79,8 @@ class SASRECModel(BaseModel):
         logger.debug('[Finish build rec layer]')
 
     def forward(self, batch, mode):
-        context, mask, input_ids, target_pos, input_mask, sample_negs, y = batch
+        # context, mask, input_ids, target_pos, input_mask, sample_negs, y 
+        _, _, input_ids, target_pos, input_mask, sample_negs, _ = batch
         # print(input_ids.shape)
         sequence_output = self.SASREC(input_ids, input_mask)  # bs, max_len, hidden_size2
 
