@@ -208,7 +208,7 @@ class GoRecDialDataset(BaseDataset):
 
     def _update_contexts(self, text_tokens, movies, entities, words, context_tokens, context_items, context_entities, entity_set, context_words, word_set):
         '''
-        This method is used to store movies for other parts of the code
+        This method is used to update variables
         '''
         context_tokens.append(text_tokens) # update context_tokens
         context_items += movies # update context_items
