@@ -137,7 +137,7 @@ class NTRDSystem(BaseSystem):
             self.evaluator.optim_metrics.add('sel_loss', AverageMetric(selection_loss))
         
         else:
-            pred, matching_pred, matching_logist = self.model.forward(batch, 'conv', mode)
+            pred, matching_pred, _ = self.model.forward(batch, 'conv', mode) # pred, matching_pred, matching_logist
             self.conv_evaluate(pred, matching_pred, batch[-2], batch[-1])
 
 
