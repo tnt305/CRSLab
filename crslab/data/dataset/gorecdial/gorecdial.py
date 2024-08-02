@@ -187,7 +187,11 @@ class GoRecDialDataset(BaseDataset):
                 augmented_conv_dicts.append(conv_dict)
             
             if len(text_tokens) > 0:
-                self._update_contexts(text_tokens, movies, entities, words, context_tokens, context_items, context_entities, entity_set, context_words, word_set)
+                context_tokens.append(text_tokens) # update context_tokens
+                context_items += movies # update context_items
+                
+                self._update_entities_and_words(entities + movies, entity_set, context_entities)
+                self._update_entities_and_words(words, word_set, context_words)
 
         return augmented_conv_dicts
 
@@ -205,16 +209,7 @@ class GoRecDialDataset(BaseDataset):
             "items": movies,
             'policy': policies,
         }
-
-    def _update_contexts(self, text_tokens, movies, entities, words, context_tokens, context_items, context_entities, entity_set, context_words, word_set):
-        '''
-        This method is used to update variables
-        '''
-        context_tokens.append(text_tokens) # update context_tokens
-        context_items += movies # update context_items
         
-        self._update_entities_and_words(entities + movies, entity_set, context_entities)
-        self._update_entities_and_words(words, word_set, context_words)
 
     def _update_entities_and_words(self, items, item_set, context_list):
         # context_list is included as a parameter to ensure generalization for models that may use it.
