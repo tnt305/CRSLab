@@ -63,7 +63,7 @@ class BaseDataLoader(ABC):
         for start_idx in tqdm(range(batch_num)):
             batch_idx = idx_list[start_idx * batch_size: (start_idx + 1) * batch_size]
             batch = [dataset[idx] for idx in batch_idx]
-            batch = batch_fn(batch) # return batchify_data
+            batch = batch_fn(batch)
             if batch == False:
                 continue
             else:
@@ -97,7 +97,7 @@ class BaseDataLoader(ABC):
             tuple or dict of torch.Tensor: batch data for recommendation.
 
         """
-        return self.get_data(self.rec_batchify, batch_size, shuffle, self.rec_process_fn) # yield batchify_data
+        return self.get_data(self.rec_batchify, batch_size, shuffle, self.rec_process_fn) 
 
     def get_policy_data(self, batch_size, shuffle=True):
         """get_data wrapper for policy.
