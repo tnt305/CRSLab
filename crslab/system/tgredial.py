@@ -186,10 +186,10 @@ class TGReDialSystem(BaseSystem):
 
     def train_recommender(self):
         if hasattr(self.rec_model, 'bert'):
-            if os.environ["CUDA_VISIBLE_DEVICES"] == '-1':
-                bert_param = list(self.rec_model.bert.named_parameters())
-            else:
+            if isinstance(self.rec_model, (torch.nn.DataParallel, torch.nn.parallel.DistributedDataParallel)):
                 bert_param = list(self.rec_model.module.bert.named_parameters())
+            else:
+                bert_param = list(self.rec_model.bert.named_parameters())
             bert_param_name = ['bert.' + n for n, p in bert_param]
         else:
             bert_param = []

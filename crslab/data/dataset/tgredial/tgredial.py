@@ -255,11 +255,7 @@ class TGReDialDataset(BaseDataset):
         return [[self.tok2ind.get(token, self.unk_token_idx) for token in sent] for sent in user_profile]
 
 
-    def add_context(self, context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set):
-        context_tokens.append(conv["text"])
-        context_policy.append(conv['policy'])
-        context_items += conv["movie"]
-        
+    def add_context(self, context_entities, context_words, conv, entity_set, word_set):
         for entity in conv["entity"] + conv["movie"]:
             if entity not in entity_set:
                 entity_set.add(entity)
@@ -301,7 +297,11 @@ class TGReDialDataset(BaseDataset):
             if context_tokens:
                 augmented_conv_dicts.append(self.create_conv_dict(conv, context_tokens, context_entities, context_words, context_policy, context_items))
             
-            self.add_context(context_tokens, context_entities, context_words, context_policy, context_items, conv, entity_set, word_set)
+            context_tokens.append(conv["text"])
+            context_policy.append(conv['policy'])
+            context_items += conv["movie"]
+        
+            self.add_context(context_entities, context_words, conv, entity_set, word_set)
         
         return augmented_conv_dicts
 
