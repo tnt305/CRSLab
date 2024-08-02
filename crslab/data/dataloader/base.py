@@ -39,7 +39,7 @@ class BaseDataLoader(ABC):
         """Collate batch data for system to fit
 
         Args:
-            batch_fn (func): function to collate data
+            batch_fn (func): function to collate data (batchify)
             batch_size (int):
             shuffle (bool, optional): Defaults to True.
             process_fn (func, optional): function to process dataset before batchify. Defaults to None.
@@ -50,20 +50,20 @@ class BaseDataLoader(ABC):
         """
         dataset = self.dataset
         if process_fn is not None:
-            dataset = process_fn()
+            dataset = process_fn() # augmentation
             logger.info('[Finish dataset process before batchify]')
         dataset = dataset[:ceil(len(dataset) * self.scale)]
         logger.debug(f'[Dataset size: {len(dataset)}]')
 
         batch_num = ceil(len(dataset) / batch_size)
         idx_list = list(range(len(dataset)))
-        if shuffle:
-            random.shuffle(idx_list)
+        if shuffle: 
+            random.shuffle(idx_list) # shuffle idx_list
 
         for start_idx in tqdm(range(batch_num)):
             batch_idx = idx_list[start_idx * batch_size: (start_idx + 1) * batch_size]
             batch = [dataset[idx] for idx in batch_idx]
-            batch = batch_fn(batch)
+            batch = batch_fn(batch) # return batchify_data
             if batch == False:
                 continue
             else:
@@ -97,7 +97,7 @@ class BaseDataLoader(ABC):
             tuple or dict of torch.Tensor: batch data for recommendation.
 
         """
-        return self.get_data(self.rec_batchify, batch_size, shuffle, self.rec_process_fn)
+        return self.get_data(self.rec_batchify, batch_size, shuffle, self.rec_process_fn) # yield batchify_data
 
     def get_policy_data(self, batch_size, shuffle=True):
         """get_data wrapper for policy.
@@ -134,7 +134,7 @@ class BaseDataLoader(ABC):
         """
         raise NotImplementedError('dataloader must implement conv_batchify() method')
 
-    def rec_process_fn(self):
+    def rec_process_fn(self): # augmentation
         """Process whole data for recommendation before batch_fn.
 
         Returns:

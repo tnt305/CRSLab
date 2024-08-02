@@ -11,7 +11,7 @@ scale: 1
 policy_model: ConvBERT
 # optim
 policy:
-  epoch: 50
+  epoch: 1
   batch_size: 8
   weight_decay: 0.01
   optimizer:

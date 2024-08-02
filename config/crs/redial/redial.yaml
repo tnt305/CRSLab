@@ -4,8 +4,8 @@ tokenize:
   rec: nltk
   conv: nltk
 # dataloader
-utterance_truncate: 80
-conversation_truncate: 40
+utterance_truncate: 60
+conversation_truncate: 30
 scale: 1
 # model
 # rec
@@ -16,8 +16,8 @@ autorec_g: sigmoid
 # conv
 conv_model: ReDialConv
 # embedding: word2vec
-embedding_dim: 300
-utterance_encoder_hidden_size: 256
+embedding_dim: 128
+utterance_encoder_hidden_size: 128
 dialog_encoder_hidden_size: 256
 dialog_encoder_num_layers: 1
 use_dropout: False
@@ -26,20 +26,20 @@ decoder_hidden_size: 256
 decoder_num_layers: 1
 # optim
 rec:
-  epoch: 1
-  batch_size: 1024
+  epoch: 10
+  batch_size: 256
   optimizer:
     name: Adam
-    lr: !!float 1e-3
+    lr: !!float 1e-4
   early_stop: true
   impatience: 3
   stop_mode: min
 conv:
-  epoch: 1
-  batch_size: 128
+  epoch: 10
+  batch_size: 64
   optimizer:
     name: Adam
-    lr: !!float 1e-3
+    lr: !!float 2e-4
   early_stop: true
   impatience: 3
   stop_mode: min

@@ -5,7 +5,7 @@ tokenize:
   conv: gpt2
 # dataloader
 context_truncate: 256
-response_truncate: 30
+response_truncate: 15
 item_truncate: 100
 scale: 1
 # model
@@ -19,23 +19,23 @@ rec:
   batch_size: 8
   optimizer:
     name: AdamW
-    lr: !!float 1e-3
+    lr: !!float 5e-4
     weight_decay: !!float 0.0000
   early_stop: true
   stop_mode: max
   impatience: 3
-  lr_bert: !!float 1e-5
+  lr_bert: !!float 2e-5
 conv:
   epoch: 1
   batch_size: 1
   optimizer:
     name: AdamW
-    lr: !!float 3e-5
+    lr: !!float 5e-4
     eps: !!float 1e-06
     weight_decay: !!float 0.01
   lr_scheduler:
     name: TransformersLinearLR
-    warmup_steps: 100
+    warmup_steps: 50
   early_stop: true
   impatience: 3
   stop_mode: min

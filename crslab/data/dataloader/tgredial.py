@@ -99,6 +99,18 @@ class TGReDialDataLoader(BaseDataLoader):
         self.item_truncate = opt.get('item_truncate', None)
 
     def rec_process_fn(self, *args, **kwargs):
+        """
+        Augments the dataset for recommendation tasks by duplicating each conversation
+        for each movie mentioned in the conversation.
+
+        Parameters:
+        *args: Variable length argument list. Not used in this function.
+        **kwargs: Arbitrary keyword arguments. Not used in this function.
+
+        Returns:
+        augment_dataset (list): A list of dictionaries, where each dictionary represents
+        a conversation with an additional 'item' key indicating the movie being recommended.
+        """
         augment_dataset = []
         for conv_dict in tqdm(self.dataset):
             for movie in conv_dict['items']:
@@ -108,26 +120,52 @@ class TGReDialDataLoader(BaseDataLoader):
         return augment_dataset
 
     def _process_rec_context(self, context_tokens):
-        compact_context = []
+        compact_context = [] 
+        # add split token
         for i, utterance in enumerate(context_tokens):
             if i != 0:
                 utterance.insert(0, self.sent_split_idx)
             compact_context.append(utterance)
-        compat_context = truncate(merge_utt(compact_context),
+        # truncate 
+        compat_context = truncate(merge_utt(compact_context), 
                                   self.context_truncate - 2,
                                   truncate_tail=False)
+        # add start, end tokens
         compat_context = add_start_end_token_idx(compat_context,
                                                  self.start_token_idx,
                                                  self.end_token_idx)
         return compat_context
 
     def _neg_sample(self, item_set):
+        """
+        This function is used to generate a negative sample for recommendation tasks.
+        It selects an item that is not in the given item set.
+
+        Parameters:
+        item_set (set): A set of items that are already in the user's interaction history.
+
+        Returns:
+        item (int): A negative sample item that is not in the given item set.
+        """
         item = random.randint(1, self.item_size)
         while item in item_set:
             item = random.randint(1, self.item_size)
         return item
 
     def _process_history(self, context_items, item_id=None):
+        """
+        This function processes the interaction history and generates input IDs, input masks, and negative samples.
+
+        Parameters:
+        context_items (list): A list of item IDs representing the user's interaction history.
+        item_id (int, optional): The ID of the item the user is interacting with. Defaults to None.
+
+        Returns:
+        input_ids (list): A list of input IDs representing the user's interaction history.
+        target_pos (list, optional): A list of target positions representing the user's interaction with the item. Returned only if item_id is not None.
+        input_mask (list): A list of input masks indicating the positions of valid input IDs.
+        sample_negs (list): A list of negative samples generated for the user's interaction history.
+        """
         input_ids = truncate(context_items,
                              max_length=self.item_truncate,
                              truncate_tail=False)
@@ -144,6 +182,27 @@ class TGReDialDataLoader(BaseDataLoader):
             return input_ids, input_mask, sample_negs
 
     def rec_batchify(self, batch):
+        """
+        Prepares a batch of recommendation data for training or inference.
+
+        Parameters:
+        batch (list): A list of dictionaries, where each dictionary represents a conversation.
+            Each dictionary contains the following keys:
+            - 'context_tokens': A list of lists, representing the tokens of the conversation context.
+            - 'item': The ID of the movie being recommended.
+            - 'interaction_history' (optional): A list of movie IDs representing the interaction history.
+            - 'context_items': A list of movie IDs representing the context items.
+
+        Returns:
+        tuple: A tuple containing the following elements:
+        - batch_context (torch.Tensor): A tensor representing the padded context tokens.
+        - batch_mask (torch.Tensor): A tensor representing the mask for the context tokens.
+        - batch_input_ids (torch.Tensor): A tensor representing the padded input IDs for the recommendation model.
+        - batch_target_pos (torch.Tensor): A tensor representing the padded target positions for the recommendation model.
+        - batch_input_mask (torch.Tensor): A tensor representing the mask for the input IDs.
+        - batch_sample_negs (torch.Tensor): A tensor representing the padded sampled negative IDs for the recommendation model.
+        - batch_movie_id (torch.Tensor): A tensor representing the movie IDs for the recommendations.
+        """
         batch_context = []
         batch_movie_id = []
         batch_input_ids = []

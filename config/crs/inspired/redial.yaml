@@ -14,10 +14,10 @@ rec_model: InspiredRec
 # conv
 conv_model: InspiredConv
 # embedding: word2vec
-embedding_dim: 300
-use_dropout: False
-dropout: 0.3
-decoder_hidden_size: 256
+embedding_dim: 128
+use_dropout: True
+dropout: 0.35
+decoder_hidden_size: 128
 decoder_num_layers: 1
 # optim
 rec:
@@ -25,7 +25,7 @@ rec:
   batch_size: 8
   optimizer:
     name: AdamW
-    lr: !!float 1e-3
+    lr: !!float 5e-5
     weight_decay: !!float 0.0000
   early_stop: true
   stop_mode: max
@@ -36,8 +36,8 @@ conv:
   batch_size: 4
   optimizer:
     name: AdamW
-    lr: !!float 3e-5
-    eps: !!float 1e-06
+    lr: !!float 1e-4
+    eps: !!float 2e-05
     weight_decay: !!float 0.01
   lr_scheduler:
     name: TransformersLinearLR
