@@ -126,4 +126,5 @@ class KGSFDataLoader(BaseDataLoader):
                 padded_tensor(batch_response, self.pad_token_idx))
 
     def policy_batchify(self, *args, **kwargs):
+        # Optional function
         pass
