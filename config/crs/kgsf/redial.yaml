@@ -23,19 +23,19 @@ reduction: false
 n_positions: 1024
 # optim
 pretrain:
-  epoch: 3
+  epoch: 1
   batch_size: 128
   optimizer:
     name: Adam
     lr: !!float 1e-3
 rec:
-  epoch: 9
+  epoch: 1
   batch_size: 128
   optimizer:
     name: Adam
     lr: !!float 1e-3
 conv:
-  epoch: 90
+  epoch: 1
   batch_size: 128
   optimizer:
     name: Adam

@@ -180,24 +180,6 @@ class TransformerEncoderLayer(nn.Module):
         tensor *= mask.unsqueeze(-1).type_as(tensor)
         return tensor
 
-from dataclasses import dataclass
-@dataclass
-class TransformerEncoderConfig:
-    n_heads: int
-    n_layers: int
-    embedding_size: int
-    ffn_size: int
-    vocabulary_size: int
-    embedding: nn.Embedding = None
-    dropout: float = 0.0
-    attention_dropout: float = 0.0
-    relu_dropout: float = 0.0
-    padding_idx: int = 0
-    learn_positional_embeddings: bool = False
-    embeddings_scale: bool = False
-    reduction: bool = True
-    n_positions: int = 1024
-
 class TransformerEncoder(nn.Module):
     """
     Transformer encoder module.
@@ -225,47 +207,72 @@ class TransformerEncoder(nn.Module):
     :param int n_positions: Size of the position embeddings matrix.
     """
 
-class TransformerEncoder(nn.Module):
-    def __init__(self, config: TransformerEncoderConfig):
+    def __init__(
+            self,
+            n_heads,
+            n_layers,
+            embedding_size,
+            ffn_size,
+            vocabulary_size,
+            embedding=None,
+            dropout=0.0,
+            attention_dropout=0.0,
+            relu_dropout=0.0,
+            padding_idx=0,
+            learn_positional_embeddings=False,
+            embeddings_scale=False,
+            reduction=True,
+            n_positions=1024
+    ):
         super(TransformerEncoder, self).__init__()
-        self.embedding_size = config.embedding_size
-        self.ffn_size = config.ffn_size
-        self.n_layers = config.n_layers
-        self.n_heads = config.n_heads
-        self.dim = config.embedding_size
-        self.embeddings_scale = config.embeddings_scale
-        self.reduction = config.reduction
-        self.padding_idx = config.padding_idx
-        self.dropout = nn.Dropout(config.dropout)
-        self.out_dim = config.embedding_size
-        assert config.embedding_size % config.n_heads == 0, \
+
+        self.embedding_size = embedding_size
+        self.ffn_size = ffn_size
+        self.n_layers = n_layers
+        self.n_heads = n_heads
+        self.dim = embedding_size
+        self.embeddings_scale = embeddings_scale
+        self.reduction = reduction
+        self.padding_idx = padding_idx
+        # this is --dropout, not --relu-dropout or --attention-dropout
+        self.dropout = nn.Dropout(dropout)
+        self.out_dim = embedding_size
+        assert embedding_size % n_heads == 0, \
             'Transformer embedding size must be a multiple of n_heads'
-        if config.embedding is not None:
+
+        # check input formats:
+        if embedding is not None:
             assert (
-                config.embedding_size is None or config.embedding_size == config.embedding.weight.shape[1]
+                    embedding_size is None or embedding_size == embedding.weight.shape[1]
             ), "Embedding dim must match the embedding size."
-        if config.embedding is not None:
-            self.embeddings = config.embedding
+
+        if embedding is not None:
+            self.embeddings = embedding
         else:
-            assert config.padding_idx is not None
+            assert False
+            assert padding_idx is not None
             self.embeddings = nn.Embedding(
-                config.vocabulary_size, config.embedding_size, padding_idx=config.padding_idx
+                vocabulary_size, embedding_size, padding_idx=padding_idx
             )
-            nn.init.normal_(self.embeddings.weight, 0, config.embedding_size ** -0.5)
-        self.position_embeddings = nn.Embedding(config.n_positions, config.embedding_size)
-        if not config.learn_positional_embeddings:
+            nn.init.normal_(self.embeddings.weight, 0, embedding_size ** -0.5)
+
+        # create the positional embeddings
+        self.position_embeddings = nn.Embedding(n_positions, embedding_size)
+        if not learn_positional_embeddings:
             create_position_codes(
-                config.n_positions, config.embedding_size, out=self.position_embeddings.weight
+                n_positions, embedding_size, out=self.position_embeddings.weight
             )
         else:
-            nn.init.normal_(self.position_embeddings.weight, 0, config.embedding_size ** -0.5)
+            nn.init.normal_(self.position_embeddings.weight, 0, embedding_size ** -0.5)
+
+        # build the model
         self.layers = nn.ModuleList()
         for _ in range(self.n_layers):
             self.layers.append(TransformerEncoderLayer(
-                config.n_heads, config.embedding_size, config.ffn_size,
-                attention_dropout=config.attention_dropout,
-                relu_dropout=config.relu_dropout,
-                dropout=config.dropout,
+                n_heads, embedding_size, ffn_size,
+                attention_dropout=attention_dropout,
+                relu_dropout=relu_dropout,
+                dropout=dropout,
             ))
 
     def forward(self, input):

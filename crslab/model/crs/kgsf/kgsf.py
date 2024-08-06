@@ -332,84 +332,74 @@ class KGSFModel(BaseModel):
         logits = torch.cat(logits, dim=1)
         return logits, inputs
 
-    def decode_beam_search_with_kg(self, token_encoding, entity_reps, entity_emb_attn, entity_mask, word_reps, word_emb_attn, word_mask, beam=4):
+    def _decode_beam_search_with_kg(self, token_encoding, entity_reps, entity_emb_attn, entity_mask,
+                                    word_reps, word_emb_attn, word_mask, beam=4):
         batch_size = token_encoding[0].shape[0]
-        sequences, inputs, incr_state = self._initialize_beam_search(batch_size, beam)
+        inputs = self._starts(batch_size).long().reshape(1, batch_size, -1)
+        incr_state = None
 
+        sequences = [[[list(), list(), 1.0]]] * batch_size
         for i in range(self.response_truncate):
             if i == 1:
-                token_encoding, entity_reps, entity_emb_attn, entity_mask, word_reps, word_emb_attn, word_mask = \
-                    self._repeat_inputs(token_encoding, entity_reps, entity_emb_attn, entity_mask, word_reps, word_emb_attn, word_mask, beam)
+                token_encoding = (token_encoding[0].repeat(beam, 1, 1),
+                                  token_encoding[1].repeat(beam, 1, 1))
+                entity_reps = entity_reps.repeat(beam, 1, 1)
+                entity_emb_attn = entity_emb_attn.repeat(beam, 1)
+                entity_mask = entity_mask.repeat(beam, 1)
+                word_reps = word_reps.repeat(beam, 1, 1)
+                word_emb_attn = word_emb_attn.repeat(beam, 1)
+                word_mask = word_mask.repeat(beam, 1)
 
+            # at beginning there is 1 candidate, when i!=0 there are 4 candidates
             if i != 0:
-                inputs = self._get_inputs_from_sequences(sequences, beam, batch_size)
-            #logits, copy_logits, gen_logits
-            logits, _, _ = self._compute_logits(inputs, token_encoding, word_reps, word_mask, entity_reps, entity_mask, incr_state, entity_emb_attn, word_emb_attn)
-            
-            probs, preds = self._get_top_k_probabilities(logits, beam)
-            
-            sequences = self._update_sequences(sequences, inputs, logits, probs, preds, beam, batch_size)
+                inputs = []
+                for d in range(len(sequences[0])):
+                    for j in range(batch_size):
+                        text = sequences[j][d][0]
+                        inputs.append(text)
+                inputs = torch.stack(inputs).reshape(beam, batch_size, -1)  # (beam, batch_size, _)
 
-            if self._is_generation_finished(inputs):
-                break
-
-        return self._get_final_outputs(sequences)
-
-    def _initialize_beam_search(self, batch_size, beam):
-        inputs = self._starts(batch_size).long().reshape(1, batch_size, -1)
-        sequences = [[[list(), list(), 1.0]]] * batch_size
-        incr_state = None
-        return sequences, inputs, incr_state
-
-    def _repeat_inputs(self, token_encoding, entity_reps, entity_emb_attn, entity_mask, word_reps, word_emb_attn, word_mask, beam):
-        return (
-            (token_encoding[0].repeat(beam, 1, 1), token_encoding[1].repeat(beam, 1, 1)),
-            entity_reps.repeat(beam, 1, 1),
-            entity_emb_attn.repeat(beam, 1),
-            entity_mask.repeat(beam, 1),
-            word_reps.repeat(beam, 1, 1),
-            word_emb_attn.repeat(beam, 1),
-            word_mask.repeat(beam, 1)
-        )
-
-    def _get_inputs_from_sequences(self, sequences, beam, batch_size):
-        return torch.stack([seq[0][0] for seq in sequences]).reshape(beam, batch_size, -1)
-
-    def _compute_logits(self, inputs, token_encoding, word_reps, word_mask, entity_reps, entity_mask, incr_state, entity_emb_attn, word_emb_attn):
-        with torch.no_grad():
-            dialog_latent, incr_state = self.conv_decoder(
-                inputs.reshape(-1, inputs.size(-1)),
-                token_encoding, word_reps, word_mask, entity_reps, entity_mask, incr_state
-            )
-        dialog_latent = dialog_latent[:, -1:, :]
-        copy_latent = self.copy_norm(torch.cat((entity_emb_attn.unsqueeze(1), word_emb_attn.unsqueeze(1), dialog_latent), dim=-1))
-        copy_logits = self.copy_output(copy_latent) * self.copy_mask.unsqueeze(0).unsqueeze(0)
-        gen_logits = F.linear(dialog_latent, self.token_embedding.weight)
-        logits = copy_logits + gen_logits
-        return logits, copy_logits, gen_logits
-
-    def _get_top_k_probabilities(self, logits, beam):
-        return torch.nn.functional.softmax(logits).topk(beam, dim=-1)
-
-    def _update_sequences(self, sequences, inputs, logits, probs, preds, beam, batch_size):
-        new_sequences = []
-        for j in range(batch_size):
-            candidates = [
-                (
-                    torch.cat((inputs[n][j].reshape(-1), preds[n][j][0][k].reshape(-1))),
-                    torch.cat((sequences[j][n][1], logits[n][j][0].unsqueeze(0))) if sequences[j][n][1] else logits[n][j][0].unsqueeze(0),
-                    sequences[j][n][2] * probs[n][j][0][k]
+            with torch.no_grad():
+                dialog_latent, incr_state = self.conv_decoder(
+                    inputs.reshape(len(sequences[0]) * batch_size, -1),
+                    token_encoding, word_reps, word_mask,
+                    entity_reps, entity_mask, incr_state
                 )
-                for n in range(len(sequences[j]))
-                for k in range(beam)
-            ]
-            new_sequences.append(sorted(candidates, key=lambda x: x[2], reverse=True)[:beam])
-        return new_sequences
+                dialog_latent = dialog_latent[:, -1:, :]  # (bs, 1, dim)
+                db_latent = entity_emb_attn.unsqueeze(1)
+                concept_latent = word_emb_attn.unsqueeze(1)
+                copy_latent = self.copy_norm(torch.cat((db_latent, concept_latent, dialog_latent), dim=-1))
 
-    def _is_generation_finished(self, inputs):
-        return ((inputs == self.end_token_idx).sum(dim=1) > 0).sum().item() == inputs.size(1)
+                copy_logits = self.copy_output(copy_latent) * self.copy_mask.unsqueeze(0).unsqueeze(0)
+                gen_logits = F.linear(dialog_latent, self.token_embedding.weight)
+                sum_logits = copy_logits + gen_logits
 
-    def _get_final_outputs(self, sequences):
+            logits = sum_logits.reshape(len(sequences[0]), batch_size, 1, -1)
+            # turn into probabilities,in case of negative numbers
+            probs, preds = torch.nn.functional.softmax(logits).topk(beam, dim=-1)
+
+            # (candeidate, bs, 1 , beam) during first loop, candidate=1, otherwise candidate=beam
+
+            for j in range(batch_size):
+                all_candidates = []
+                for n in range(len(sequences[j])):
+                    for k in range(beam):
+                        prob = sequences[j][n][2]
+                        logit = sequences[j][n][1]
+                        if logit == []:
+                            logit_tmp = logits[n][j][0].unsqueeze(0)
+                        else:
+                            logit_tmp = torch.cat((logit, logits[n][j][0].unsqueeze(0)), dim=0)
+                        seq_tmp = torch.cat((inputs[n][j].reshape(-1), preds[n][j][0][k].reshape(-1)))
+                        candidate = [seq_tmp, logit_tmp, prob * probs[n][j][0][k]]
+                        all_candidates.append(candidate)
+                ordered = sorted(all_candidates, key=lambda tup: tup[2], reverse=True)
+                sequences[j] = ordered[:beam]
+
+            # check if everyone has generated an end token
+            all_finished = ((inputs == self.end_token_idx).sum(dim=1) > 0).sum().item() == batch_size
+            if all_finished:
+                break
         logits = torch.stack([seq[0][1] for seq in sequences])
         inputs = torch.stack([seq[0][0] for seq in sequences])
         return logits, inputs

@@ -143,7 +143,11 @@ class KGSFSystem(BaseSystem):
             self.evaluator.report(mode='test')
 
     def train_conversation(self):
-        self.model.freeze_parameters() if os.environ["CUDA_VISIBLE_DEVICES"] == '-1' else self.model.module.freeze_parameters()
+        if isinstance(self.model, torch.nn.DataParallel):
+            self.model.module.freeze_parameters()
+        else:
+            self.model.freeze_parameters()
+            
         self.init_optim(self.conv_optim_opt, self.model.parameters())
         for epoch in range(self.conv_epoch):
             self.evaluator.reset_metrics()
