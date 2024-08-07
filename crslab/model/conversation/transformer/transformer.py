@@ -102,6 +102,24 @@ class TransformerModel(BaseModel):
         self.reduction = opt['reduction']
         self.n_positions = opt['n_positions']
         self.longest_label = opt.get('longest_label', 1)
+        # encoder
+        self.transformer_config = {
+            'n_heads': opt.get('n_heads', 2),
+            'n_layers': opt.get('n_layers', 2),
+            'embedding_size': self.token_emb_dim,
+            'ffn_size': opt.get('ffn_size', 300),
+            'vocabulary_size': self.vocab_size,
+            'embedding': self.token_embedding,
+            'dropout': opt.get('dropout', 0.1),
+            'attention_dropout': opt.get('attention_dropout', 0.0),
+            'relu_dropout': opt.get('relu_dropout', 0.1),
+            'padding_idx': self.pad_token_idx,
+            'learn_positional_embeddings': opt.get('learn_positional_embeddings', False),
+            'embeddings_scale': opt.get('embedding_scale', True),
+            'reduction': opt.get('reduction', False),
+            'n_positions': opt.get('n_positions', 1024)
+        }
+
         super(TransformerModel, self).__init__(opt, device)
 
     def build_model(self):
@@ -123,20 +141,7 @@ class TransformerModel(BaseModel):
     def _build_conversation_layer(self):
         self.register_buffer('START', torch.tensor([self.start_token_idx], dtype=torch.long))
         self.conv_encoder = TransformerEncoder(
-            n_heads=self.n_heads,
-            n_layers=self.n_layers,
-            embedding_size=self.token_emb_dim,
-            ffn_size=self.ffn_size,
-            vocabulary_size=self.vocab_size,
-            embedding=self.token_embedding,
-            dropout=self.dropout,
-            attention_dropout=self.attention_dropout,
-            relu_dropout=self.relu_dropout,
-            padding_idx=self.pad_token_idx,
-            learn_positional_embeddings=self.learn_positional_embeddings,
-            embeddings_scale=self.embeddings_scale,
-            reduction=self.reduction,
-            n_positions=self.n_positions,
+            self.transformer_config
         )
 
         self.conv_decoder = TransformerDecoder(

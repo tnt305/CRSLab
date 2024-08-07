@@ -90,7 +90,24 @@ class KBRDModel(BaseModel):
         self.num_bases = opt.get('num_bases', 8)
         self.kg_emb_dim = opt.get('kg_emb_dim', 300)
         self.user_emb_dim = self.kg_emb_dim
-        # transformer
+        # encoder
+        self.transformer_config = {
+            'n_heads': opt.get('n_heads', 2),
+            'n_layers': opt.get('n_layers', 2),
+            'embedding_size': self.token_emb_dim,
+            'ffn_size': opt.get('ffn_size', 300),
+            'vocabulary_size': self.vocab_size,
+            'embedding': None,
+            'dropout': opt.get('dropout', 0.1),
+            'attention_dropout': opt.get('attention_dropout', 0.0),
+            'relu_dropout': opt.get('relu_dropout', 0.1),
+            'padding_idx': self.pad_token_idx,
+            'learn_positional_embeddings': opt.get('learn_positional_embeddings', False),
+            'embeddings_scale': opt.get('embedding_scale', True),
+            'reduction': opt.get('reduction', False),
+            'n_positions': opt.get('n_positions', 1024)
+        }
+        # decode
         self.n_heads = opt.get('n_heads', 2)
         self.n_layers = opt.get('n_layers', 2)
         self.ffn_size = opt.get('ffn_size', 300)
@@ -99,11 +116,10 @@ class KBRDModel(BaseModel):
         self.relu_dropout = opt.get('relu_dropout', 0.1)
         self.embeddings_scale = opt.get('embedding_scale', True)
         self.learn_positional_embeddings = opt.get('learn_positional_embeddings', False)
-        self.reduction = opt.get('reduction', False)
         self.n_positions = opt.get('n_positions', 1024)
         self.longest_label = opt.get('longest_label', 1)
         self.user_proj_dim = opt.get('user_proj_dim', 512)
-
+        
         super(KBRDModel, self).__init__(opt, device)
 
     def build_model(self, *args, **kwargs):
@@ -136,20 +152,7 @@ class KBRDModel(BaseModel):
     def _build_conversation_layer(self):
         self.register_buffer('START', torch.tensor([self.start_token_idx], dtype=torch.long))
         self.dialog_encoder = TransformerEncoder(
-            self.n_heads,
-            self.n_layers,
-            self.token_emb_dim,
-            self.ffn_size,
-            self.vocab_size,
-            self.token_embedding,
-            self.dropout,
-            self.attention_dropout,
-            self.relu_dropout,
-            self.pad_token_idx,
-            self.learn_positional_embeddings,
-            self.embeddings_scale,
-            self.reduction,
-            self.n_positions
+            self.transformer_config
         )
         self.decoder = TransformerDecoder(
             self.n_heads,
