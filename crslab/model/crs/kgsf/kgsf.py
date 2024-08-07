@@ -107,13 +107,13 @@ class KGSFModel(BaseModel):
         self.n_heads = opt['n_heads']
         self.n_layers = opt['n_layers']
         self.ffn_size = opt.get('ffn_size', 300)
-        self.dropout = opt['dropout']
+        self.dropout = opt.get('dropout', 0.2)
         self.attention_dropout = opt.get('attention_dropout', 0.0)
         self.relu_dropout = opt.get('relu_dropout', 0.2)
         self.learn_positional_embeddings = opt.get('learn_positional_embeddings', False)
-        self.embeddings_scale = opt['embeddings_scale']
-        self.reduction = opt['reduction']
-        self.n_positions = opt['n_positions']
+        self.embeddings_scale = opt.get('embedding_scale', True)
+        self.reduction = opt.get('reduction', False)
+        self.n_positions = opt.get('n_positions', 1024)
         self.response_truncate = opt.get('response_truncate', 20)
         # encoder
         self.transformer_config = {
@@ -123,14 +123,14 @@ class KGSFModel(BaseModel):
             'ffn_size': self.ffn_size,
             'vocabulary_size': self.vocab_size,
             'embedding': None,
-            'dropout': opt.get('dropout', 0.2),
+            'dropout': self.dropout,
             'attention_dropout': self.attention_dropout,
             'relu_dropout': self.relu_dropout,
             'padding_idx': self.pad_token_idx,
             'learn_positional_embeddings': self.learn_positional_embeddings,
-            'embeddings_scale': opt.get('embedding_scale', True),
-            'reduction': opt.get('reduction', False),
-            'n_positions': opt.get('n_positions', 1024)
+            'embeddings_scale': self.embeddings_scale,
+            'reduction': self.reduction,
+            'n_positions': self.n_positions
         }
         # copy mask
         dataset = opt['dataset']
