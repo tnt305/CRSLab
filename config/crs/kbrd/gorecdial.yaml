@@ -2,7 +2,7 @@
 dataset: GoRecDial
 tokenize: nltk
 # dataloader
-context_truncate: 256
+context_truncate: 512
 response_truncate: 30
 scale: 1
 # model
@@ -19,12 +19,12 @@ relu_dropout: 0.1
 learn_positional_embeddings: false
 embeddings_scale: true
 reduction: false
-n_positions: 1024
+n_positions: 512
 user_proj_dim: 512
 # optim
 rec:
   epoch: 1
-  batch_size: 4096
+  batch_size: 2048
   optimizer:
     name: Adam
     lr: !!float 3e-3
