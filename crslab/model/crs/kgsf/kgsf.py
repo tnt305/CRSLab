@@ -106,28 +106,28 @@ class KGSFModel(BaseModel):
         # transformer
         self.n_heads = opt['n_heads']
         self.n_layers = opt['n_layers']
-        self.ffn_size = opt['ffn_size']
+        self.ffn_size = opt.get('ffn_size', 300)
         self.dropout = opt['dropout']
-        self.attention_dropout = opt['attention_dropout']
-        self.relu_dropout = opt['relu_dropout']
-        self.learn_positional_embeddings = opt['learn_positional_embeddings']
+        self.attention_dropout = opt.get('attention_dropout', 0.0)
+        self.relu_dropout = opt.get('relu_dropout', 0.2)
+        self.learn_positional_embeddings = opt.get('learn_positional_embeddings', False)
         self.embeddings_scale = opt['embeddings_scale']
         self.reduction = opt['reduction']
         self.n_positions = opt['n_positions']
         self.response_truncate = opt.get('response_truncate', 20)
         # encoder
         self.transformer_config = {
-            'n_heads': opt.get('n_heads', 2),
-            'n_layers': opt.get('n_layers', 2),
+            'n_heads': self.n_heads,
+            'n_layers': self.n_layers,
             'embedding_size': self.token_emb_dim,
-            'ffn_size': opt.get('ffn_size', 300),
+            'ffn_size': self.ffn_size,
             'vocabulary_size': self.vocab_size,
             'embedding': None,
-            'dropout': opt.get('dropout', 0.1),
-            'attention_dropout': opt.get('attention_dropout', 0.0),
-            'relu_dropout': opt.get('relu_dropout', 0.1),
+            'dropout': opt.get('dropout', 0.2),
+            'attention_dropout': self.attention_dropout,
+            'relu_dropout': self.relu_dropout,
             'padding_idx': self.pad_token_idx,
-            'learn_positional_embeddings': opt.get('learn_positional_embeddings', False),
+            'learn_positional_embeddings': self.learn_positional_embeddings,
             'embeddings_scale': opt.get('embedding_scale', True),
             'reduction': opt.get('reduction', False),
             'n_positions': opt.get('n_positions', 1024)
