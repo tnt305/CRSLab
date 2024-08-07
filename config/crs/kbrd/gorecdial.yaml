@@ -2,7 +2,7 @@
 dataset: GoRecDial
 tokenize: nltk
 # dataloader
-context_truncate: 512
+context_truncate: 256
 response_truncate: 30
 scale: 1
 # model
@@ -23,17 +23,17 @@ n_positions: 512
 user_proj_dim: 512
 # optim
 rec:
-  epoch: 1
+  epoch: 5
   batch_size: 2048
   optimizer:
     name: Adam
-    lr: !!float 3e-3
+    lr: !!float 5e-4
 conv:
-  epoch: 1
+  epoch: 5
   batch_size: 256
   optimizer:
     name: Adam
-    lr: !!float 3e-3
+    lr: !!float 5e-4
   lr_scheduler:
     name: ReduceLROnPlateau
     patience: 3
