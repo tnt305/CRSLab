@@ -23,11 +23,11 @@ n_positions: 1024
 user_proj_dim: 512
 # optim
 rec:
-  epoch: 10
+  epoch: 5
   batch_size: 4096
   optimizer:
     name: Adam
-    lr: !!float 3e-3
+    lr: !!float 1e-3
 conv:
   epoch: 3
   batch_size: 32
