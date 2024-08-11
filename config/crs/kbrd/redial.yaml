@@ -3,7 +3,7 @@ dataset: ReDial
 tokenize: nltk
 # dataloader
 context_truncate: 512
-response_truncate: 60
+response_truncate: 128
 scale: 1
 # model
 model: KBRD
@@ -27,15 +27,15 @@ rec:
   batch_size: 4096
   optimizer:
     name: Adam
-    lr: !!float 5e-4
+    lr: !!float 5e-3
 conv:
-  epoch: 3
-  batch_size: 64
+  epoch: 2
+  batch_size: 128
   early_stop: True
   stop_mode: min
   optimizer:
     name: Adam
-    lr: !!float 1e-3
+    lr: !!float 5e-4
   lr_scheduler:
     name: ReduceLROnPlateau
     patience: 3
