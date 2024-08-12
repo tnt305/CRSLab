@@ -13,9 +13,9 @@ num_bases: 8
 n_heads: 2
 n_layers: 2
 ffn_size: 300
-dropout: 0.1
+dropout: 0.05
 attention_dropout: 0.0
-relu_dropout: 0.1
+relu_dropout: 0.05
 learn_positional_embeddings: false
 embeddings_scale: true
 reduction: false
@@ -23,11 +23,11 @@ n_positions: 1024
 user_proj_dim: 512
 # optim
 rec:
-  epoch: 10
-  batch_size: 2048
+  epoch: 8
+  batch_size: 1024
   optimizer:
     name: Adam
-    lr: !!float 1e-3
+    lr: !!float 5e-4
 conv:
   epoch: 3
   batch_size: 128
@@ -39,4 +39,4 @@ conv:
   lr_scheduler:
     name: ReduceLROnPlateau
     patience: 3
-    factor: 0.5
+    factor: 0.2
