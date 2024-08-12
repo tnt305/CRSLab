@@ -29,8 +29,8 @@ rec:
     name: Adam
     lr: !!float 3e-3
 conv:
-  epoch: 5
-  batch_size: 384
+  epoch: 3
+  batch_size: 128
   early_stop: True
   stop_mode: min
   optimizer:
